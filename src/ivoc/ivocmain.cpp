@@ -117,7 +117,7 @@ static PropertyData properties[] = {
 {"*units_on_flag", "on"},
 {"*NFRAME", "0"}, // see src/oc/code.c for the default value
 {"*NSTACK", "0"}, // see src/oc/code.c for the default value
-{"*Py_NoSiteFlag", "0"}, 
+{"*Py_NoSiteFlag", "0"},
 {"*python", "off"},
 {"*nopython", "off"},
 {"*err_dialog", "off"},
@@ -234,7 +234,7 @@ void mac_open_doc(const char* s) {
 				hoc_default_dll_loaded_ = 1.;
 			}
 		}
-	}		
+	}
 	hoc_xopen1(s, 0);
 }
 void mac_open_app(){
@@ -330,10 +330,10 @@ static int nrn_optargint(const char* opt, int* pargc, const char** argv, int dfl
 }
 
 #if USENRNJAVA
-void nrn_InitializeJavaVM();	
+void nrn_InitializeJavaVM();
 #endif
 
-#if 0 //for debugging
+#if 1 //for debugging
 void prargs(const char* s, int argc, const char** argv) {
 	int i;
 	printf("%s argc=%d\n", s, argc);
@@ -435,7 +435,7 @@ int ivocmain (int argc, const char** argv, const char** env) {
 	  printf("Warning: detected user attempt to enable MPI, but MPI support was disabled at build time.\n");
 	}
 
-#endif 		
+#endif
 
 #if NRN_MUSIC
 	nrn_optarg_on("-music", &argc, argv);
@@ -516,7 +516,7 @@ int ivocmain (int argc, const char** argv, const char** env) {
 #endif
 	}
 #endif // !unix.
-    
+
 #if HAVE_IV
 #if OCSMALL
 	our_argc = 2;
@@ -634,7 +634,7 @@ IFGUI
 	if (pw < 1100) {
 		scale = 1200./double(pw);
 	}
-	session->style()->find_attribute("mswin_scale", scale); 
+	session->style()->find_attribute("mswin_scale", scale);
 	iv_display_scale(float(scale));
 ENDGUI
 #endif
@@ -675,7 +675,7 @@ ENDGUI
 		long i;
 		if (session->style()->find_attribute("isatty", i)) {
 			nrn_istty_ = i;
-		}		
+		}
 	}else
 #endif
 	{
@@ -704,7 +704,7 @@ ENDGUI
 #endif //HAVE_IV
 
 #if USENRNJAVA
-	nrn_InitializeJavaVM();	
+	nrn_InitializeJavaVM();
 #endif
 #if OCSMALL
 	if (argc == 1) {
@@ -790,7 +790,7 @@ void hoc_single_event_run() {
 #if HAVE_IV
 IFGUI
 	void single_event_run();
-	
+
 	single_event_run();
 ENDGUI
 #endif

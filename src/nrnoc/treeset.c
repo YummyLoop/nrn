@@ -184,7 +184,7 @@ and for the compartment external node is
 cx/dt*(vxnew - vxold) - gx(vxnew - ex)
 	= cm/dt*(vmnew - vmold) + (di/dvm*(vmnew - vmold) + i(vmold))
 	+ ax_j*(vxnew_j - vxnew) = 0
-	
+
 and this forms the matrix equation row (for an internal node)
 	(cm/dt + di/dvm - dis/dvi + ai_j)*vinew
 	- ai_j*vinew_j
@@ -253,7 +253,7 @@ promote code sharing of the fixed, cvode, and daspk methods and with
 regard to the efficiency of cvode and daspk.
 
 The existing fixed step setup stategy is almost identical to that needed
-by the current balance portion jacobian solvers for cvode and daspk. 
+by the current balance portion jacobian solvers for cvode and daspk.
 However it is wasteful to calculate the right hand side since that is
 thrown away because those solvers demand a calculation of M*x=b where b
 is provided and the answer ends up in b. Also, for the function evaluation
@@ -346,12 +346,12 @@ void nrn_rhs(NrnThread* _nt) {
 	double w;
 	int measure = 0;
 	NrnThreadMembList* tml;
-	
+
 	i1 = 0;
 	i2 = i1 + _nt->ncell;
 	i3 = _nt->end;
 	if (_nt->id == 0 && nrn_mech_wtime_) { measure = 1; }
-	
+
 	if (diam_changed) {
 		nrn_thread_error("need recalc_diam()");
 		recalc_diam();
@@ -656,7 +656,7 @@ Prop* need_memb(Symbol* sym)
 	}
 	return m;
 }
-	
+
 Node* nrn_alloc_node_; /* needed by models that use area */
 
 Prop* prop_alloc(Prop** pp, int type, Node* nd) {
@@ -793,7 +793,7 @@ hoc_execerror(secname(sec), "diameter diam = 0. Setting to 1e-6");
 			rright = rleft;
 		}
 	}
-	/* last segment has 0 length. area is 1e2 
+	/* last segment has 0 length. area is 1e2
 	in dimensionless units */
 	NODEAREA(sec->pnode[j]) = 1.e2;
 	UPDATE_VEC_AREA(sec->pnode[j]);
@@ -816,7 +816,7 @@ void connection_coef(void)	/* setup a and b */
 #if RA_WARNING
 	extern int nrn_ra_set;
 #endif
-	
+
 #if 1
 	/* now only called from recalc_diam */
 	assert(!tree_changed);
@@ -961,7 +961,7 @@ static int pt3dconst_;
 void pt3dconst(void) {
 	int i = pt3dconst_;
 	if (ifarg(1)) {
-		pt3dconst_ = (int)chkarg(1, 0., 1.);	
+		pt3dconst_ = (int)chkarg(1, 0., 1.);
 	}
 	hoc_retpushx((double)i);
 }
@@ -1050,7 +1050,7 @@ static void nrn_pt3dbufchk(Section* sec, int n) {
 
 static void nrn_pt3dmodified(Section* sec, int i0) {
 	int n, i;
-	
+
 	++nrn_shape_changed_;
 	diam_changed = 1;
 	sec->recalc_area_ = 1;
@@ -1170,7 +1170,7 @@ void pt3dremove(void) {
 	n = sec->npt3d;
 	i0 = (int)chkarg(1, 0., (double)(n-1));
 	nrn_pt3dremove(sec, i0);
-	
+
 	hoc_retpushx(0.);
 }
 
@@ -1211,7 +1211,7 @@ void nrn_length_change(Section* sec, double d)
 			sec->pt3d[i].x = x0 + (sec->pt3d[i].x - x0)*fac;
 			sec->pt3d[i].y = y0 + (sec->pt3d[i].y - y0)*fac;
 			sec->pt3d[i].z = z0 + (sec->pt3d[i].z - z0)*fac;
-			
+
 		}
 		++nrn_shape_changed_;
 	}
@@ -1222,7 +1222,7 @@ int can_change_morph(Section* sec)
 {
 	return pt3dconst_ == 0;
 }
-	
+
 static void stor_pt3d_vec(Section* sec, IvocVect* xv, IvocVect* yv, IvocVect* zv, IvocVect* dv) {
 	int i;
 	int n = vector_capacity(xv);
@@ -1328,10 +1328,10 @@ void spine3d(void) { /* returns x value at index of 3d list  */
 void stor_pt3d(Section* sec, double x, double y, double z, double d)
 {
 	int n;
-	
+
 	n = sec->npt3d;
 	nrn_pt3dbufchk(sec, n+1);
-	sec->npt3d++;			
+	sec->npt3d++;
 	sec->pt3d[n].x = x;
 	sec->pt3d[n].y = y;
 	sec->pt3d[n].z = z;
@@ -1413,7 +1413,7 @@ void nrn_define_shape(void) {
 			y1 = psec->pt3d[psec->npt3d-1].y - psec->pt3d[0].y;
 			if (!arc0at0(psec)) {
 				arc1 = 1. - arc;
-			}				
+			}
 			if (arc1 < .5) {
 				x1 = -x1;
 				y1 = -y1;
@@ -1445,7 +1445,7 @@ printf("nrn_define_shape: %s first and last 3-d point at same (x,y)\n", secname(
 			if (arc == nrn_connection_position(ch)) {
 				++nch;
 			}
-		}		
+		}
 		if (nch > 1) {
 			angle += ich/(nch - 1.) * .8 - .4;
 		}
@@ -1464,7 +1464,7 @@ printf("nrn_define_shape: %s first and last 3-d point at same (x,y)\n", secname(
 		}
 		stor_pt3d(sec, x1, y1, z, nrn_diameter(sec->pnode[sec->nnode-2]));
 		/* don't let above change length due to round-off errors*/
-		sec->pt3d[sec->npt3d-1].arc = len;		
+		sec->pt3d[sec->npt3d-1].arc = len;
 		sec->prop->dparam[2].val = len;
 	}
 	changed_ = nrn_shape_changed_;
@@ -1604,7 +1604,7 @@ void v_setup_vectors(void) {
 	Node* nd;
 	Prop* p;
 	NrnThread* _nt;
-	
+
 	if (tree_changed) {
 		setup_topology(); /* now classical secorder */
 		v_structure_change = 1;
@@ -1633,7 +1633,7 @@ void v_setup_vectors(void) {
 			}
 		}
 	}
-		
+
 #if 1 /* see finitialize */
 	/* and count the artificial cells */
 	for (i=0; i < n_memb_func; ++i) if (nrn_is_artificial_[i] && memb_func[i].initialize) {
@@ -1641,7 +1641,7 @@ void v_setup_vectors(void) {
 		memb_list[i].nodecount = tmp->count;
 	}
 #endif
-	
+
 	/* allocate it*/
 
 	for (i=0; i < n_memb_func; ++i)
@@ -1695,7 +1695,7 @@ void v_setup_vectors(void) {
 		}
 	}
     }
-	
+
 #endif /* CACHEVEC */
 
 	nrn_thread_memblist_setup();
@@ -1723,22 +1723,22 @@ hoc_execerror(memb_func[i].sym->name, "is not thread safe");
 			memb_list[i].nodelist[j] = (Node*)0;
 			memb_list[i].data[j] = p->param;
 			memb_list[i].pdata[j] = p->dparam;
-/* for now, round robin all the artificial cells */	
+/* for now, round robin all the artificial cells */
 /* but put the non-threadsafe ones in thread 0 */
-/* 
+/*
  Note that artficial cells are assumed not to need a thread specific
  Memb_list. But this implies that they do not have thread specific
  data. For this reason, for now, an otherwise thread-safe artificial
  cell model is declared by nmodl as thread-unsafe.
 */
-   
+
 			if (memb_func[i].vectorized == 0) {
 				pnt->_vnt = (void*)(nrn_threads);
 			}else{
 				pnt->_vnt = (void*)(nrn_threads + nti);
 				nti = (nti + 1)%nrn_nthread;
 			}
-			++j;			
+			++j;
 		}
 	}
 #endif
@@ -1780,7 +1780,7 @@ void node_data_structure(void) {
 	int i, j;
 	nrn_thread_error("node_data_structure");
 	Pd(v_node_count);
-	
+
 	Pd(nrn_global_ncell);
 /*	P "Indices of node parents\n");*/
 	for (i=0; i < v_node_count; ++i) {
@@ -1864,7 +1864,7 @@ void nrn_complain(double* pp) {
 			nd = sec->pnode[j];
 			for (p = nd->prop; p; p = p->next) {
 				if (p->param == pp) {
-					
+
 fprintf(stderr, "Error at section location %s(%g)\n", secname(sec),
   nrn_arc_position(sec, nd));
 					return;
@@ -1913,11 +1913,11 @@ int nrn_modeltype(void) {
 	static Template* lm = (Template*)0;
 	int type;
 	v_setup_vectors();
-	
+
 	if (!nrndae_list_is_empty()) {
 		return 2;
 	}
-	
+
 	type = 0;
 	if (nrn_global_ncell > 0) {
 		type = 1;
@@ -1996,7 +1996,7 @@ static void nrn_matrix_node_alloc(void) {
 			if (nt->_actual_rhs != (double*)0) {
 				return;
 			}
-		}	
+		}
 	}
 /*printf("nrn_matrix_node_alloc does its work\n");*/
 #if CACHEVEC
@@ -2007,7 +2007,7 @@ static void nrn_matrix_node_alloc(void) {
 	nrn_recalc_node_ptrs();
 #endif /* CACHEVEC */
 
-#if 0
+#if 1
 printf("nrn_matrix_node_alloc use_sparse13=%d cvode_active_=%d nrn_use_daspk_=%d\n", use_sparse13, cvode_active_, nrn_use_daspk_);
 #endif
 	++nrn_matrix_cnt_;
@@ -2119,9 +2119,9 @@ void nrn_old_thread_save(void) {
 	int n = nrn_nthread;
 	if (old_actual_v_){return;} /* one is already outstanding */
 	n_old_thread_ = n;
-	old_actual_v_size_ = (int*)ecalloc(n, sizeof(int));	
-	old_actual_v_ = (double**)ecalloc(n, sizeof(double*));	
-	old_actual_area_ = (double**)ecalloc(n, sizeof(double*));	
+	old_actual_v_size_ = (int*)ecalloc(n, sizeof(int));
+	old_actual_v_ = (double**)ecalloc(n, sizeof(double*));
+	old_actual_area_ = (double**)ecalloc(n, sizeof(double*));
 	for (i=0; i < n; ++i) {
 		NrnThread* nt = nrn_threads + i;
 		old_actual_v_size_[i] = nt->end;

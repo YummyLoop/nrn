@@ -30,7 +30,7 @@
    (no parent resistance, only a half segment resistance). It was an error
    to try to connect a section to position 0.  Now we are going to allow
    that by the following artifice.
-   
+
    Section 0 is always special. Its nodes act as roots to the independent
    trees.  They do not connect to each other. It has no properties.
 */
@@ -142,7 +142,7 @@ assert(0)
 	}
 
 	return err;
-}	
+}
 #endif /*DEBUGSOLVE*/
 
 
@@ -150,7 +150,7 @@ double node_dist(Section* sec, Node* node)
 {
 	int inode;
 	double ratio;
-	
+
 	if (!sec || sec->parentnode == node) {
 		return 0.;
 	}else if ((inode = node->sec_node_index_) == sec->nnode-1) {
@@ -221,13 +221,13 @@ void distance(void) {
 	double d, chkarg();
 	int mode;
 	Node* node, *node_exact();
-	Section *sec;	
+	Section *sec;
 	static Node* origin_node;
-	
+
 	if (tree_changed) {
 		setup_topology();
 	}
-			
+
 	if (ifarg(2)) {
 		nrn_seg_or_x_arg(2, &sec, &d);
 		mode = (int) chkarg(1, 0., 1.);
@@ -252,7 +252,7 @@ hoc_execerror("Distance origin not valid.","Need to initialize origin with dista
 	}
 	hoc_retpushx(d);
 }
-	
+
 static void dashes(Section* sec, int offset, int first);
 
 void nrnhoc_topology(void) /* print the topology of the branched cable */
@@ -278,7 +278,7 @@ static void dashes(Section* sec, int offset, int first)
 	Section* ch;
 	char direc[10];
 	extern double nrn_section_orientation();
-	
+
 	i = (int)nrn_section_orientation(sec);
 	sprintf(direc, "(%d-%d)", i, 1-i);
 	for (i=0; i<offset; i++) Printf(" ");
@@ -296,7 +296,7 @@ static void dashes(Section* sec, int offset, int first)
 	for (scnt=0, ch=sec->child; ch; ++scnt, ch = ch->sibling) {
 		hoc_pushobj((Object**)ch);
 	}
-	while(scnt--) {		
+	while(scnt--) {
 		Object** hoc_objpop();
 		ch = (Section*)hoc_objpop();
 		i = node_index_exact(sec, nrn_connection_position(ch));
@@ -307,7 +307,7 @@ static void dashes(Section* sec, int offset, int first)
 
 /* solve the matrix equation */
 void nrn_solve(NrnThread* _nt) {
-#if 0
+#if 1
 	printf("\nnrn_solve enter %lx\n", (long)_nt);
 	nrn_print_matrix(_nt);
 #endif
@@ -355,7 +355,7 @@ void nrn_solve(NrnThread* _nt) {
 		bksub(_nt);
 	}
 #endif
-#if 0
+#if 1
 	printf("\nnrn_solve leave %lx\n", (long)_nt);
 	nrn_print_matrix(_nt);
 #endif
@@ -412,7 +412,7 @@ void bksub(NrnThread* _nt)
 	for (i = i2; i < i3; ++i) {
 		VEC_RHS(i) -= VEC_B(i) * VEC_RHS(_nt->_v_parent_index[i]);
 		VEC_RHS(i) /= VEC_D(i);
-	}	
+	}
     }else
 #endif /* CACHEVEC */
     {
@@ -424,7 +424,7 @@ void bksub(NrnThread* _nt)
 		nd = _nt->_v_parent[i];
 		NODERHS(cnd) -= NODEB(cnd) * NODERHS(nd);
 		NODERHS(cnd) /= NODED(cnd);
-	}	
+	}
     }
 }
 
@@ -472,7 +472,7 @@ static void section_unlink(Section* sec);
 void sec_free(hoc_Item* secitem)
 {
 	Section *sec;
-	
+
 	if (!secitem) {
 		return;
 	}
@@ -558,7 +558,7 @@ Node** node_construct(int n)
 {
 	Node* nd, **pnode;
 	int i;
-	
+
 	pnode = (Node**)ecalloc((unsigned)n, sizeof(Node*));
 	for (i = n - 1; i >= 0; i--) {
 		nd = (Node *)ecalloc(1, sizeof(Node));
@@ -736,7 +736,7 @@ static void node_realloc(Section* sec, short nseg)
 			i1 = (int)(n1*x);
 			pn2[i2] = pn1[i1];
 			pn1[i1] = (Node*)0;
-		}	
+		}
 		/* do not lose any point processes */
 		i1 = 0;
 		for (i2=0; i2 < n2; ++i2) {
@@ -826,7 +826,7 @@ void section_order(void) /* create a section order consistent */
 		sec->order = -1;
 		++section_count;
 	}
-	
+
 	if (secorder) {
 		free((char *)secorder);
 		secorder = (Section**)0;
