@@ -99,6 +99,9 @@ void nrn_solver_prepare() {
 }
 
 void cvode_fadvance(double tstop) { // tstop = -1 means single step
+#if 1
+	printf("\n-> cvode_fadvance enter %f with dt %f\n", (double) nt_t, (double) nt_dt);
+#endif
 #if USECVODE
 	int err;
 	if (net_cvode_instance) {
@@ -111,6 +114,9 @@ void cvode_fadvance(double tstop) { // tstop = -1 means single step
 		t = nt_t;
 		dt = nt_dt;
 	}
+#endif
+#if 1
+	printf("<- cvode_fadvance exit %f with dt %f\n", (double) nt_t, (double) nt_dt);
 #endif
 }
 
