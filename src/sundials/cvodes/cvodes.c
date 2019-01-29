@@ -1367,6 +1367,7 @@ int CVodeSensToggle(void *cvode_mem, booleantype sensi)
 int CVode(void *cvode_mem, realtype tout, N_Vector yout, 
           realtype *tret, int itask)
 {
+  double idt;// initial next dt for debug
   CVodeMem cv_mem;
   N_Vector wrk1, wrk2;
   long int nstloc; 
@@ -1388,6 +1389,8 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
     return(CV_NO_MALLOC);
   }
   
+  idt=cv_mem->cv_next_h; // for debug
+
   /* Check for yout != NULL */
   if ((y = yout) == NULL) {
     if(errfp!=NULL) fprintf(errfp, MSGCVS_YOUT_NULL);       
@@ -1785,7 +1788,14 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
       ncfnS += ncfnS1[is];
     }
   }
-  
+
+ #if 1
+			printf("t: %E | h: %E | nh: %E ", cv_mem->cv_tretlast, cv_mem->cv_h, cv_mem->cv_next_h); //also cv_mem->cv_tn = t
+      if (idt!=cv_mem->cv_h) 
+        printf("* \n");
+      else
+        printf("\n");
+	#endif 
   return (istate);
 
 }
@@ -4437,6 +4447,7 @@ static booleantype CVDoErrorTest(CVodeMem cv_mem, int *nflagPtr,
     eta = MAX(ETAMIN, MAX(eta, hmin / ABS(h)));
     if (*nefPtr >= SMALL_NEF) eta = MIN(eta, ETAMXF);
     CVRescale(cv_mem);
+    printf ("                | h: %E \n", cv_mem->cv_h); // for debug
     return (FALSE);
   }
   
