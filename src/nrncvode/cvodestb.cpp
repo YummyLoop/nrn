@@ -99,9 +99,6 @@ void nrn_solver_prepare() {
 }
 
 void cvode_fadvance(double tstop) { // tstop = -1 means single step
-#if 1
-	printf("\n-> cvode_fadvance enter %f with dt %f\n", (double) nt_t, (double) nt_dt);
-#endif
 #if USECVODE
 	int err;
 	if (net_cvode_instance) {
@@ -111,12 +108,16 @@ void cvode_fadvance(double tstop) { // tstop = -1 means single step
 			printf("err=%d\n", err);
 			hoc_execerror("variable step integrator error", 0);
 		}
+		#if 0
+			printf("-> cvode_fadvance %E", t);
+			if (dt != (double) nt_dt)
+				printf(" with dt %E\n", (double) nt_dt);
+			else 
+				printf("\n");
+		#endif
 		t = nt_t;
 		dt = nt_dt;
 	}
-#endif
-#if 1
-	printf("<- cvode_fadvance exit %f with dt %f\n", (double) nt_t, (double) nt_dt);
 #endif
 }
 
