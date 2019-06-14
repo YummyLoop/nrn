@@ -291,7 +291,7 @@ def _unregister_reaction(r):
         elif r2() == r:
             del _all_reactions[i]
             break
-    initializer._init_lock.acquire()
+    initializer._init_lock.release()
 
 def _register_reaction(r):
     # TODO: should we search to make sure that (a weakref to) r hasn't already been added?
@@ -1214,7 +1214,7 @@ def _compile_reactions():
     nseg_by_region = []     # a list of the number of segments for each region
     # a table for location,species -> state index
     location_index = []
-    regions_inv_1d = [reg for reg in regions_inv if not reg._secs3d]
+    regions_inv_1d = [reg for reg in regions_inv if reg._secs1d]
     regions_inv_1d.sort(key=lambda r: r._id)
     regions_inv_3d = [reg for reg in regions_inv if reg._secs3d]
     for reg in regions_inv_1d:
