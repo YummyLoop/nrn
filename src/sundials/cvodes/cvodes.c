@@ -1483,7 +1483,7 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
       nfQe++;
     }
 
-    h = hin;
+    h = hin; //hin = 0
     if ( (h != ZERO) && ((tout-tn)*h < ZERO) ) {
       if(errfp!=NULL) fprintf(errfp, MSGCVS_BAD_H0);
       return (CV_ILL_INPUT);
@@ -1789,10 +1789,11 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
     }
   }
 
+// Debug
  #if 1
-			printf("t: %E | h: %E | nh: %E ", cv_mem->cv_tretlast, cv_mem->cv_h, cv_mem->cv_next_h); //also cv_mem->cv_tn = t
+			printf("t: %E | h: %E | nh: %E | eta: %E", cv_mem->cv_tretlast, cv_mem->cv_h, cv_mem->cv_next_h, cv_mem->cv_eta); //also cv_mem->cv_tn = t
       if (idt!=cv_mem->cv_h) 
-        printf("* \n");
+        printf("* \n"); // did not use the predicted h
       else
         printf("\n");
 	#endif 
@@ -4447,7 +4448,7 @@ static booleantype CVDoErrorTest(CVodeMem cv_mem, int *nflagPtr,
     eta = MAX(ETAMIN, MAX(eta, hmin / ABS(h)));
     if (*nefPtr >= SMALL_NEF) eta = MIN(eta, ETAMXF);
     CVRescale(cv_mem);
-    printf ("                | h: %E \n", cv_mem->cv_h); // for debug
+    //printf("                | h: %E \n", cv_mem->cv_h); // for debug
     return (FALSE);
   }
   
