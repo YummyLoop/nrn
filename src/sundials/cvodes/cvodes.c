@@ -5341,6 +5341,7 @@ static void CVSetEta(CVodeMem cv_mem)
     eta = MIN(eta, etamax);
     eta /= MAX(ONE, ABS(h)*hmax_inv*eta);
     hprime = h * eta;
+    printf("-- h:%E, hprime: %E, eta: %E \n",h, hprime, eta); //debug
     if (qprime < q) nscon = 0;
   }
 
