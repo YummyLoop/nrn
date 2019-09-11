@@ -4404,14 +4404,14 @@ static void debugCVDoErrorTest(CVodeMem cv_mem, int *nefPtr){
   printf("-ErrorTest t: %E | h: %E | dsm: %E | etaq: %E \n NewtonConvergenceFailures: %ld | ErrorTestFailures: %d\n",
     cv_mem->cv_tn, 
     cv_mem->cv_h, 
-    (acnrm / tq[2]), // dsm
+    (acnrm / tq[2]), // dsm -> acnrm=WRMS ->nvector_serial.c -> N_VWrmsNorm_Serial(...)
     ONE /(RPowerR(BIAS2*(acnrm / tq[2]),ONE/L) + ADDON), //etaq
     ncfn, // newton convergence failures 
     *nefPtr // maxnef? // error test failures
     // step counter nst
   );
-  //printf("Hello world");
-
+  //tq is the test quantity array
+  //tq[2]=? see CVSet BDF or Adams
 }
 /*
  * CVDoErrorTest
