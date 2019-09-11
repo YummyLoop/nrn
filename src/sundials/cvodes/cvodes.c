@@ -1791,7 +1791,7 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
 
 // Debug
  #if 1
-			printf("Finished t: %E | h: %E | nh: %E | eta: %E", cv_mem->cv_tretlast, cv_mem->cv_h, cv_mem->cv_next_h, cv_mem->cv_eta); //also cv_mem->cv_tn = t
+			printf("Finished   t: %E | h: %E | nh: %E | eta: %E", cv_mem->cv_tretlast, cv_mem->cv_h, cv_mem->cv_next_h, cv_mem->cv_eta); //also cv_mem->cv_tn = t
       if (idt!=cv_mem->cv_h) 
         printf("* \n"); // did not use the predicted h
       else
@@ -3302,7 +3302,7 @@ static int CVStep(CVodeMem cv_mem)
     break;
 
   }
-  printf("number of step attempts: %d\n", nstepAttempts); //debug
+  printf("Number of step attempts: %d\n", nstepAttempts); //debug
 
   /* Nonlinear system solve and error test were both successful.
      Update data, and consider change of step and/or order.       */
@@ -4401,12 +4401,11 @@ static void debugCVDoErrorTest(CVodeMem cv_mem, int *nefPtr){
   // t, h, DSN, eta, MAXnef, etaq, hprime?, 
   //counter de erros do newton
   // extra: numero the solves, numero de passos 
-  printf("\nErrorTest t: %E | h: %E | dsm: %E | etaq: %E | hprime: %E|\n NewtonConvergenceFailures: %ld | ErrorTestFailures: %d",
+  printf("-ErrorTest t: %E | h: %E | dsm: %E | etaq: %E \n NewtonConvergenceFailures: %ld | ErrorTestFailures: %d\n",
     cv_mem->cv_tn, 
     cv_mem->cv_h, 
     (acnrm / tq[2]), // dsm
     ONE /(RPowerR(BIAS2*(acnrm / tq[2]),ONE/L) + ADDON), //etaq
-    cv_mem->cv_hprime,
     ncfn, // newton convergence failures 
     *nefPtr // maxnef? // error test failures
     // step counter nst
@@ -4458,12 +4457,14 @@ static booleantype CVDoErrorTest(CVodeMem cv_mem, int *nflagPtr,
   (*nefPtr)++;
   netf++;
   *nflagPtr = PREV_ERR_FAIL;
+
+  debugCVDoErrorTest(cv_mem, nefPtr);
   CVRestore(cv_mem, saved_t);
 
   /* At maxnef failures or |h| = hmin, return with kflag = REP_ERR_FAIL */
   if ((ABS(h) <= hmin*ONEPSM) || (*nefPtr == maxnef)) {
     *kflagPtr = REP_ERR_FAIL;
-    debugCVDoErrorTest(cv_mem, nefPtr);
+    
     return (FALSE);
   }
 
@@ -4477,7 +4478,7 @@ static booleantype CVDoErrorTest(CVodeMem cv_mem, int *nflagPtr,
     if (*nefPtr >= SMALL_NEF) eta = MIN(eta, ETAMXF);
     CVRescale(cv_mem);
     //printf("                | h: %E \n", cv_mem->cv_h); // for debug
-    debugCVDoErrorTest(cv_mem, nefPtr);
+    
     return (FALSE);
   }
   
@@ -4489,7 +4490,7 @@ static booleantype CVDoErrorTest(CVodeMem cv_mem, int *nflagPtr,
     q--;
     qwait = L;
     CVRescale(cv_mem);
-    debugCVDoErrorTest(cv_mem, nefPtr);
+    
     return (FALSE);
   }
 
@@ -4517,7 +4518,7 @@ static booleantype CVDoErrorTest(CVodeMem cv_mem, int *nflagPtr,
     for (is=0; is<Ns; is++) 
       N_VScale(h, tempvS[is], znS[1][is]);
   }
-  debugCVDoErrorTest(cv_mem, nefPtr);
+  
   return (FALSE);
 }
 
