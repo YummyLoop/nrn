@@ -233,6 +233,18 @@ static double maxorder(void* v) {
 	hoc_return_type_code = 1; // integer
 	return d->maxorder();
 }
+/* DEBUG - sets a threshold for eta when deciding order changes
+ * JM
+ */
+static double threshold(void* v) {
+	NetCvode* d = (NetCvode*)v;
+	hoc_return_type_code = 1; // integer
+	//printf("Hello world!");
+	if (ifarg(1)) {
+		d->threshold((float)chkarg(1, 0, MAXFLOAT));
+	}
+	return d->threshold();
+}
 static double order(void* v) {
 	NetCvode* d = (NetCvode*)v;
 	int i = 0;
@@ -587,6 +599,7 @@ static double use_fast_imem(void* v) {
 }
 
 static Member_func members[] = {
+	"threshold", threshold, //JM
 	"solve", solve,
 	"atol", nrn_atol,
 	"rtol", rtol,
@@ -1015,6 +1028,9 @@ void Cvode::maxorder(int maxord) {
 		if (mem_) { CVodeSetMaxOrd(mem_, maxord); }
 	}
 }
+void Cvode::threshold(float threshold) {//JM
+	if (mem_) { CVodeSetThreshold(mem_, threshold); }
+}
 void Cvode::minstep(double x) {
 	if (mem_) {
 		if (x > 0.) {
@@ -1077,6 +1093,7 @@ int Cvode::cvode_init(double) {
 			Printf("Cvode %p %s CVodeMalloc error %d\n", this, secname(ctd_[0].v_node_[ctd_[0].rootnodecount_]->sec), err);
 			return err;
 		}
+		threshold(ncv_->threshold());//JM
 		maxorder(ncv_->maxorder());
 		minstep(ncv_->minstep());
 		maxstep(ncv_->maxstep());

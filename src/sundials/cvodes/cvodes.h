@@ -380,6 +380,7 @@ int CVodeSetErrFile(void *cvode_mem, FILE *errfp);
 int CVodeSetFdata(void *cvode_mem, void *f_data);
 int CVodeSetGdata(void *cvode_mem, void *g_data);
 int CVodeSetMaxOrd(void *cvode_mem, int maxord);
+int CVodeSetThreshold(void *cvode_mem, float threshold); // JM
 int CVodeSetMaxNumSteps(void *cvode_mem, long int mxsteps);
 int CVodeSetMaxHnilWarns(void *cvode_mem, int mxhnil);
 int CVodeSetStabLimDet(void *cvode_mem, booleantype stldet);

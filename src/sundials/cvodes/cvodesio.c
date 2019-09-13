@@ -157,6 +157,29 @@ int CVodeSetMaxOrd(void *cvode_mem, int maxord)
   return(CV_SUCCESS);
 }
 
+//JM
+int CVodeSetThreshold(void *cvode_mem, float threshold)
+{
+  CVodeMem cv_mem;
+
+  if (cvode_mem==NULL) {
+    fprintf(stderr, MSGCVS_SET_NO_MEM);
+    return(CV_MEM_NULL);
+  }
+
+  cv_mem = (CVodeMem) cvode_mem;
+
+  if (threshold <= 0) {
+    if(errfp!=NULL) fprintf(errfp, MSGCVS_SET_NEG_MAXORD);
+    return(CV_ILL_INPUT);
+  }
+  
+  cv_mem->cv_threshold = threshold;
+
+  return(CV_SUCCESS);
+}
+
+
 /* 
  * CVodeSetMaxNumSteps
  *

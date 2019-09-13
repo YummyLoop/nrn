@@ -238,6 +238,7 @@ typedef struct CVodeMemRec {
     Limits 
     ------*/
 
+  float cv_threshold;    /* JM test THRESHOLD */
   int cv_qmax;             /* q <= qmax                                    */
   long int cv_mxstep;      /* maximum number of internal steps for one 
                               user call                                    */

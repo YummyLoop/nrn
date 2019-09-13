@@ -42,6 +42,7 @@
 #include "netcvode.h"
 #include "htlist.h"
 #include "nrnbbcore_write.h"
+#include "sundialstypes.h"
 
 typedef void (*ReceiveFunc)(Point_process*, double*, double);
 
@@ -1196,6 +1197,7 @@ NetCvode::NetCvode(bool single) {
 	use_long_double_ = 0;
 	empty_ = true; // no equations (only artificial cells).
 	MUTCONSTRUCT(0);
+	threshold_ = RCONST(1.5); // JM
 	maxorder_ = 5;
 	maxstep_ = 1e9;
 	minstep_ = 0.;
@@ -4427,6 +4429,18 @@ void NetCvode::maxorder(int x) {
 		}
 	}
 }
+void NetCvode::threshold(float x) { // JM
+	threshold_ = x;
+	if (gcv_) {
+		gcv_->threshold(threshold_);
+	}else{
+		int i, j;
+		lvardtloop(i,j) {
+			p[i].lcv_[j].threshold(threshold_);
+		}
+	}
+}
+
 int NetCvode::order(int ii) {
 	int o = 0;
 	if (gcv_) {

@@ -131,6 +131,7 @@ public:
 	void atol(double); double atol(){return atol_;}
 	double rtol_, atol_;
 	void stiff(int); int stiff(){return stiff_;} // 0 nothing stiff, 1 voltage, 2 mechanisms
+	void threshold(float); float threshold(){return threshold_;}//JM
 	void maxorder(int); int maxorder(){return maxorder_;}
 	int order(int);
 	void minstep(double); double minstep(){return minstep_;}
@@ -184,6 +185,7 @@ public:
 	void ps_thread_link(PreSyn*);
 	MaxStateTable* mst_;
 private:
+	float threshold_; //JM
 	int maxorder_, jacobian_, stiff_;
 	double maxstep_, minstep_;
 	

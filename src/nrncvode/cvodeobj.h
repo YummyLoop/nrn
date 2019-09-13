@@ -93,6 +93,7 @@ public:
 	double time() const { return t_; }
 	void free_cvodemem();
 	int order();
+	void threshold(float); // JM
 	void maxorder(int), minstep(double), maxstep(double);
 public:
 	double tn_, t0_, t_;

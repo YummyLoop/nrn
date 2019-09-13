@@ -360,6 +360,7 @@ void *CVodeCreate(int lmm, int iter)
   cv_mem->cv_uround = UNIT_ROUNDOFF;
 
   /* Set default values for integrator optional inputs */
+  cv_mem->cv_threshold = RCONST(1.5); //JM
   cv_mem->cv_f        = NULL;
   cv_mem->cv_f_data   = NULL;
   cv_mem->cv_errfp    = stderr;
@@ -5366,7 +5367,9 @@ static void CVSetEta(CVodeMem cv_mem)
 {
 
   /* If eta below the threshhold THRESH, reject a change of step size */
-  if (eta < THRESH) {
+  printf("Current Thress is %E \n", cv_mem->cv_threshold);
+  //if (eta < THRESH) {
+    if (eta < cv_mem->cv_threshold) {
     eta = ONE;
     hprime = h;
   } else {
@@ -5482,7 +5485,9 @@ static void CVChooseEta(CVodeMem cv_mem)
   
   etam = MAX(etaqm1, MAX(etaq, etaqp1));
   
-  if (etam < THRESH) {
+  
+  //if (etam < THRESH) { }
+  if (eta < cv_mem->cv_threshold) {
     eta = ONE;
     qprime = q;
     return;
