@@ -1791,7 +1791,8 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
 
 // Debug
  #if 1
-			printf("Finished   t: %E | h: %E | nh: %E | eta: %E", cv_mem->cv_tretlast, cv_mem->cv_h, cv_mem->cv_next_h, cv_mem->cv_eta); //also cv_mem->cv_tn = t
+			printf("Finished   t: %E | h: %E | nh: %E | eta: %E", 
+      cv_mem->cv_tretlast, cv_mem->cv_h, cv_mem->cv_hprime, cv_mem->cv_eta); //also cv_mem->cv_tn = t
       if (idt!=cv_mem->cv_h) 
         printf("* \n"); // did not use the predicted h
       else
