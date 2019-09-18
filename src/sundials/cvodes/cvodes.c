@@ -1383,7 +1383,6 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
   mkdir("tmp", 7777);
   dataFile = fopen("tmp/tmp.log", "a");
 
-  double idt;// initial next dt for debug
   //---------------------------------------------------------
   CVodeMem cv_mem;
   N_Vector wrk1, wrk2;
@@ -1408,8 +1407,6 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
     return(CV_NO_MALLOC);
   }
   
-  idt=cv_mem->cv_next_h; // for debug
-
   /* Check for yout != NULL */
   if ((y = yout) == NULL) {
     if(errfp!=NULL) fprintf(errfp, MSGCVS_YOUT_NULL); 
@@ -1484,6 +1481,7 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
   fprintf(dataFile, "threshold, %E\n", cv_mem->cv_threshold);//custom eta threshold
   fprintf(dataFile, "maxorder, %d\n", cv_mem->cv_qmax);
   fprintf(dataFile, "q_start, %d\n", cv_mem->cv_q);
+  fprintf(dataFile, "hprime_start, %E\n", cv_mem->cv_hprime); // next h
 
 
   //-----------------------------------------------------
@@ -1851,13 +1849,14 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
   fprintf(dataFile, "t_end, %E\n", cv_mem->cv_tn); // time
   fprintf(dataFile, "h_end, %E\n", cv_mem->cv_h); //h step size
   fprintf(dataFile, "q_end, %d\n", cv_mem->cv_q); // order 
-  fprintf(dataFile, "hprime, %E\n", cv_mem->cv_hprime); // next h
+  fprintf(dataFile, "hprime_end, %E\n", cv_mem->cv_hprime); // next h
   fprintf(dataFile, "eta, %E\n", cv_mem->cv_eta); // eta
   fprintf(dataFile, "ncfn, %ld\n", cv_mem->cv_ncfn); /* number of corrector convergence failures    */
   fprintf(dataFile, "nni, %ld\n", cv_mem->cv_nni);  /* number of nonlinear iterations performed     */
   fprintf(dataFile, "netf, %ld\n", cv_mem->cv_netf);  /* number of error test failures                */
   fprintf(dataFile, "nst, %ld\n", cv_mem->cv_nst); /* number of internal steps taken               */
   fprintf(dataFile, "nor, %ld\n", cv_mem->cv_nor); /* counter for number of order reductions    */
+  fprintf(dataFile, "nstloc, %ld\n", nstloc); /*number of internal steps for one user call */
   fclose(dataFile);//debug file
   return (istate);
 
