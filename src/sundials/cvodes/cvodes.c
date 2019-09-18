@@ -1848,11 +1848,16 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
 
 
   // Debug, dump end values
-  fprintf(dataFile, "t_end, %E\n", cv_mem->cv_tn);
-  fprintf(dataFile, "h_end, %E\n", cv_mem->cv_h);
-  fprintf(dataFile, "q_end, %d\n", cv_mem->cv_q);
-  fprintf(dataFile, "hprime, %E\n", cv_mem->cv_hprime);
-  fprintf(dataFile, "eta, %E\n", cv_mem->cv_eta);
+  fprintf(dataFile, "t_end, %E\n", cv_mem->cv_tn); // time
+  fprintf(dataFile, "h_end, %E\n", cv_mem->cv_h); //h step size
+  fprintf(dataFile, "q_end, %d\n", cv_mem->cv_q); // order 
+  fprintf(dataFile, "hprime, %E\n", cv_mem->cv_hprime); // next h
+  fprintf(dataFile, "eta, %E\n", cv_mem->cv_eta); // eta
+  fprintf(dataFile, "ncfn, %ld\n", cv_mem->cv_ncfn); /* number of corrector convergence failures    */
+  fprintf(dataFile, "nni, %ld\n", cv_mem->cv_nni);  /* number of nonlinear iterations performed     */
+  fprintf(dataFile, "netf, %ld\n", cv_mem->cv_netf);  /* number of error test failures                */
+  fprintf(dataFile, "nst, %ld\n", cv_mem->cv_nst); /* number of internal steps taken               */
+  fprintf(dataFile, "nor, %ld\n", cv_mem->cv_nor); /* counter for number of order reductions    */
   fclose(dataFile);//debug file
   return (istate);
 
@@ -3263,9 +3268,9 @@ static int CVStep(CVodeMem cv_mem)
   if ((nst > 0) && (hprime != h)) CVAdjustParams(cv_mem);
 
   /* Looping point for attempts to take a step */
-  int nstepAttempts = 0; //debug
+  //int nstepAttempts = 0; //debug
   loop {  
-    nstepAttempts++;//debug
+    //nstepAttempts++;//debug
     CVPredict(cv_mem);  
     CVSet(cv_mem);
 
@@ -3359,7 +3364,7 @@ static int CVStep(CVodeMem cv_mem)
     break;
 
   }
-  fprintf(dataFile, "Number of step attempts: %d\n", nstepAttempts); //debug
+  //fprintf(dataFile, "Number of step attempts: %d\n", nstepAttempts); //debug
 
   /* Nonlinear system solve and error test were both successful.
      Update data, and consider change of step and/or order.       */
@@ -4448,27 +4453,7 @@ static void CVRestore(CVodeMem cv_mem, realtype saved_t)
   }
 }
 
-/*-----------------------------------------------------------------*/
 
-/*
-  DEBUG - JM
-*/
-static void debugCVDoErrorTest(CVodeMem cv_mem, int *nefPtr){
-  //to print: 
-  // t, h, DSN, eta, MAXnef, etaq, hprime?, 
-  //counter de erros do newton
-  // extra: numero the solves, numero de passos 
-  fprintf(dataFile, "-ErrorTest t: %E | h: %E | etaq: %E \n NewtonConvergenceFailures: %ld | ErrorTestFailures: %d\n",
-    cv_mem->cv_tn, 
-    cv_mem->cv_h, 
-    ONE /(RPowerR(BIAS2*(acnrm / tq[2]),ONE/L) + ADDON), //etaq
-    ncfn, // newton convergence failures 
-    *nefPtr // maxnef? // error test failures
-    // step counter nst
-  );
-  //tq is the test quantity array
-  //tq[2]=? see CVSet BDF or Adams
-}
 /*
  * CVDoErrorTest
  *
@@ -4506,7 +4491,6 @@ static booleantype CVDoErrorTest(CVodeMem cv_mem, int *nflagPtr,
   /* If est. local error norm dsm passes test, return TRUE */  
   *dsmPtr = dsm; 
   if (dsm <= ONE){
-    debugCVDoErrorTest(cv_mem, nefPtr);
     return (TRUE);
   } 
   
@@ -4515,7 +4499,6 @@ static booleantype CVDoErrorTest(CVodeMem cv_mem, int *nflagPtr,
   netf++;
   *nflagPtr = PREV_ERR_FAIL;
 
-  debugCVDoErrorTest(cv_mem, nefPtr);
   CVRestore(cv_mem, saved_t);
 
   /* At maxnef failures or |h| = hmin, return with kflag = REP_ERR_FAIL */
@@ -5389,6 +5372,7 @@ static void CVPrepareNextStep(CVodeMem cv_mem, realtype dsm)
 
   /* etaq is the ratio of new to old h at the current order */  
   etaq = ONE /(RPowerR(BIAS2*dsm,ONE/L) + ADDON);
+  fprintf(dataFile, "etaq, %E\n", etaq);
   
   /* If no order change, adjust eta and acor in CVSetEta and return */
   if (qwait != 0) {
