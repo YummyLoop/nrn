@@ -24,6 +24,7 @@ and Flux_pair structs and their respective functions
 #define FALSE				0
 #define TORTUOSITY			2
 #define VOLUME_FRACTION 	3
+#define ICS_ALPHA        	4
 
 #define NEUMANN             0
 #define DIRICHLET           1
@@ -82,7 +83,7 @@ typedef struct {
 } Current_Triple;
 
 typedef void (*ReactionRate)(double**, double**, double**, double*, double*, double*, double*, double**, double);
-typedef void (*ECSReactionRate)(double*, double*, double*);
+typedef void (*ECSReactionRate)(double*, double*, double*, double*);
 typedef struct Reaction {
 	struct Reaction* next;
 	ECSReactionRate reaction;
@@ -91,6 +92,8 @@ typedef struct Reaction {
 	double** species_states;
 	unsigned char* subregion;
 	unsigned int region_size;
+    int* mc3d_indices_offsets;
+    double** mc3d_mults;
 } Reaction;
 
 typedef struct {
@@ -111,6 +114,7 @@ class Grid_node {
     double *states;         // Array of doubles representing Grid space
     double *states_x;
     double *states_y;
+    double *states_z;       //TODO: This is only used by ICS, is it necessary? 
     double *states_cur;
     int size_x;          // Size of X dimension
     int size_y;          // Size of Y dimension
@@ -128,11 +132,13 @@ class Grid_node {
     Concentration_Pair* concentration_list;
     Current_Triple* current_list;
     ssize_t num_concentrations, num_currents;
-    
+
     /*used for MPI implementation*/
     int num_all_currents;
     int* proc_offsets;
     int* proc_num_currents;
+    int* proc_flux_offsets;
+    int* proc_num_fluxes;
     long* current_dest;
     double* all_currents;
     /*Extension to handle a variable diffusion characteristics of a grid*/
@@ -153,12 +159,18 @@ class Grid_node {
     double** ics_concentration_seg_ptrs;
     double** ics_current_seg_ptrs;
     double* ics_scale_factors;
-    double* ics_states_cur;
     int ics_num_segs;
 
     int insert(int grid_list_index);
+    int node_flux_count;
+    long * node_flux_idx;
+    double * node_flux_scale;
+    PyObject ** node_flux_src;
+
+    virtual void set_diffusion(double*, int) = 0;
     virtual void set_num_threads(const int n) = 0;
-    virtual void do_grid_currents(double dt, int id) = 0;
+    virtual void do_grid_currents(double*, double dt, int id) = 0;
+    virtual void apply_node_flux3D(double dt, double* states) = 0;
     virtual void volume_setup() = 0;
     virtual int dg_adi() = 0;
     virtual void variable_step_diffusion(const double* states, double* ydot) = 0;
@@ -166,19 +178,20 @@ class Grid_node {
     virtual void scatter_grid_concentrations() = 0;
     virtual void hybrid_connections() = 0;
     virtual void variable_step_hybrid_connections(const double* cvode_states_3d, double* const ydot_3d, const double* cvode_states_1d, double *const  ydot_1d) = 0;
-    virtual void free_Grid() = 0;
 };
 
 class ECS_Grid_node : public Grid_node{
     public:
         //Data for DG-ADI
+        ~ECS_Grid_node();
         struct ECSAdiGridData* ecs_tasks;
         struct ECSAdiDirection* ecs_adi_dir_x;
         struct ECSAdiDirection* ecs_adi_dir_y;
         struct ECSAdiDirection* ecs_adi_dir_z;
 
         void set_num_threads(const int n);
-        void do_grid_currents(double dt, int id);  
+        void do_grid_currents(double *, double dt, int id);
+        void apply_node_flux3D(double dt, double* states);
         void volume_setup();
         int dg_adi();
         void variable_step_diffusion(const double* states, double* ydot);
@@ -186,7 +199,7 @@ class ECS_Grid_node : public Grid_node{
         void variable_step_hybrid_connections(const double* cvode_states_3d, double* const ydot_3d, const double* cvode_states_1d, double *const  ydot_1d);
         void scatter_grid_concentrations();
         void hybrid_connections();
-        void free_Grid();
+        void set_diffusion(double*, int);
 };
 
 typedef struct ECSAdiDirection{
@@ -207,6 +220,10 @@ typedef struct ECSAdiGridData{
 
 class ICS_Grid_node : public Grid_node{
     public:
+        ICS_Grid_node();
+        ~ICS_Grid_node();
+        //fractional volumes
+        double* _ics_alphas;
         //stores the positive x,y, and z neighbors for each node. [node0_x, node0_y, node0_z, node1_x ...]
         long* _neighbors;
 
@@ -235,12 +252,16 @@ class ICS_Grid_node : public Grid_node{
         struct ICSAdiDirection* ics_adi_dir_x;
         struct ICSAdiDirection* ics_adi_dir_y;
         struct ICSAdiDirection* ics_adi_dir_z;
-        
+       
+        ICS_Grid_node(PyHocObject*, long, long*, long*, long*,
+                           long*, long*, long, long*, long, long*, long,
+                           double*, double*, double, bool, double, double*); 
         void divide_x_work(const int nthreads);
         void divide_y_work(const int nthreads);
         void divide_z_work(const int nthreads);
         void set_num_threads(const int n);
-        void do_grid_currents(double dt, int id);  
+        void do_grid_currents(double*, double dt, int id);
+        void apply_node_flux3D(double dt, double* states); 
         void volume_setup();
         int dg_adi();
         void variable_step_diffusion(const double* states, double* ydot);
@@ -248,11 +269,12 @@ class ICS_Grid_node : public Grid_node{
         void hybrid_connections();
         void variable_step_hybrid_connections(const double* cvode_states_3d, double* const ydot_3d, const double* cvode_states_1d, double *const  ydot_1d);
         void scatter_grid_concentrations();
-        void free_Grid();
+        void run_threaded_ics_dg_adi(struct ICSAdiDirection*);
+        void set_diffusion(double*, int);
 };
 
 typedef struct ICSAdiDirection{
-    void (*ics_dg_adi_dir)(ICS_Grid_node* g, int, int, int, double, double*, double*, double*);
+    void (*ics_dg_adi_dir)(ICS_Grid_node* g, int, int, int, double, double*, double*, double*, double*, double*, double*);
     double* states_in;
     double* states_out;
     double* deltas;
@@ -261,8 +283,10 @@ typedef struct ICSAdiDirection{
     long* ordered_start_stop_indices; 
     long* line_start_stop_indices;
     double dc;
+    double* dcgrid;
     double d;
 }ICSAdiDirection;
+
 
 typedef struct ICSAdiGridData{
     //Start and stop node indices for lines
@@ -274,6 +298,9 @@ typedef struct ICSAdiGridData{
     ICSAdiDirection* ics_adi_dir;
     double* scratchpad;
     double* RHS;
+    double* l_diag;
+    double* diag;
+    double* u_diag;
     //double* deltas;
 }ICSAdiGridData;
 
@@ -322,21 +349,28 @@ extern "C" int ECS_insert(int grid_list_index, PyHocObject* my_states, int my_nu
 Grid_node *ICS_make_Grid(PyHocObject* my_states, long num_nodes, long* neighbors, 
                 long* ordered_x_nodes, long* ordered_y_nodes, long* ordered_z_nodes,
                 long* x_line_defs, long x_lines_length, long* y_line_defs, long y_lines_length, long* z_line_defs,
-                long z_lines_length, double d, double dx, bool is_diffusable, double atolscale);
+                long z_lines_length, double* dcs, double dx, bool is_diffusable, double atolscale, double* ics_alphas);
 
 // Insert an  ICS_Grid_node "new_Grid" into the list located at grid_list_index in Parallel_grids
 extern "C" int ICS_insert(int grid_list_index, PyHocObject* my_states, long num_nodes, long* neighbors,
                 long* ordered_x_nodes, long* ordered_y_nodes, long* ordered_z_nodes,
                 long* x_line_defs, long x_lines_length, long* y_line_defs, long y_lines_length, long* z_line_defs,
-                long z_lines_length, double d, double dx, bool is_diffusable, double atolscale);
+                long z_lines_length, double* dcs, double dx, bool is_diffusable, double atolscale, double* ics_alphas);
+
+extern "C" int ICS_insert_inhom(int grid_list_index, PyHocObject* my_states, long num_nodes, long* neighbors,
+                long* ordered_x_nodes, long* ordered_y_nodes, long* ordered_z_nodes,
+                long* x_line_defs, long x_lines_length, long* y_line_defs, long y_lines_length, long* z_line_defs,
+                long z_lines_length, double* dcs, double dx, bool is_diffusable, double atolscale, double* ics_alphas);
 
 
 
 // Set the diffusion coefficients for a given grid_id 
-extern "C" int set_diffusion(int grid_list_index, int grid_id, double dc_x, double dc_y, double dc_z);
+extern "C" int set_diffusion(int, int, double*,  int);
 
 // Delete a specific Grid_node "find" from the list "head"
 int remove(Grid_node **head, Grid_node *find);
 
 // Destroy the list located at list_index and free all memory
 void empty_list(int list_index);
+
+void apply_node_flux(int, long*, double*, PyObject**, double, double*);

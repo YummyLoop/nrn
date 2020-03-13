@@ -3320,7 +3320,7 @@ Point_process* SelfEvent::index2pp(int type, int oindex) {
 			}
 		}
 	}
-	assert(sepp_->find(type + n_memb_func*oindex, pp));
+	nrn_assert(sepp_->find(type + n_memb_func*oindex, pp));
 	return pp;
 }
 
@@ -5167,7 +5167,7 @@ void ConditionEvent::check(NrnThread* nt, double tt, double teps) {
 	}
 }
 
-ConditionEvent::ConditionEvent() {qthresh_ = NULL;}
+ConditionEvent::ConditionEvent() {qthresh_ = NULL; valold_ = 0.0;}
 ConditionEvent::~ConditionEvent() {}
 
 void ConditionEvent::condition(Cvode* cv) { //logic for high order threshold detection

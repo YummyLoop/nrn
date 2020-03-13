@@ -137,10 +137,12 @@ void current_reaction(double *states);
 
 void run_threaded_deltas(ICS_Grid_node* g, ICSAdiDirection* ics_adi_dir);
 void run_threaded_ics_dg_adi(ICS_Grid_node* g, ICSAdiDirection* ics_adi_dir);
-void ics_dg_adi_x(ICS_Grid_node* g, int, int, int, double, double*, double*, double*);
-void ics_dg_adi_y(ICS_Grid_node* g, int, int, int, double, double*, double*, double*);
-void ics_dg_adi_z(ICS_Grid_node* g, int, int, int, double, double*, double*, double*);
-
+void ics_dg_adi_x(ICS_Grid_node* g, int, int, int, double, double*, double*, double*, double*, double*, double*);
+void ics_dg_adi_y(ICS_Grid_node* g, int, int, int, double, double*, double*, double*, double*, double*, double*);
+void ics_dg_adi_z(ICS_Grid_node* g, int, int, int, double, double*, double*, double*, double*, double*, double*);
+void ics_dg_adi_x_inhom(ICS_Grid_node* g, int, int, int, double, double*, double*, double*, double*, double*, double*);
+void ics_dg_adi_y_inhom(ICS_Grid_node* g, int, int, int, double, double*, double*, double*, double*, double*, double*);
+void ics_dg_adi_z_inhom(ICS_Grid_node* g, int, int, int, double, double*, double*, double*, double*, double*, double*);
 
 /*Variable step function declarations*/
 void _rhs_variable_step(const double, const double*, double*);
@@ -182,5 +184,5 @@ void *TaskQueue_exe_tasks(void*);
 void start_threads(const int);
 void TaskQueue_sync(TaskQueue*);
 void ecs_atolscale(double*);
-
+void apply_node_flux3D(Grid_node*, double, double*);
 

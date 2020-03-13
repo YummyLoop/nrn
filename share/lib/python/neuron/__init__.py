@@ -188,7 +188,7 @@ else:
 # global list of paths already loaded by load_mechanisms
 nrn_dll_loaded = []
 
-def load_mechanisms(path):
+def load_mechanisms(path, warn_if_already_loaded=True):
     """
     load_mechanisms(path)
 
@@ -204,7 +204,8 @@ def load_mechanisms(path):
     
     global nrn_dll_loaded
     if path in nrn_dll_loaded:
-        print("Mechanisms already loaded from path: %s.  Aborting." % path)
+        if warn_if_already_loaded:
+            print("Mechanisms already loaded from path: %s.  Aborting." % path)
         return True
     
     # in case NEURON is assuming a different architecture to Python,
@@ -427,15 +428,18 @@ def nrn_dll_sym_nt(name, type):
     global nt_dlls
     import ctypes
     import os
-    if len(nt_dlls) is 0:
+    if len(nt_dlls) == 0:
       b = 'bin'
-      if h.nrnversion(8).find('i686') is 0:
+      if h.nrnversion(8).find('i686') == 0:
         b = 'bin'
       path = os.path.join(h.neuronhome().replace('/','\\'), b)
       p = sys.version_info[0]*10 + sys.version_info[1]
-      for dllname in ['nrniv.dll', 'libnrnpython%d.dll'%p]:
+      for dllname in ['libnrniv.dll', 'libnrnpython%d.dll'%p]:
         p = os.path.join(path, dllname)
-        nt_dlls.append(ctypes.cdll[p])
+        try:
+          nt_dlls.append(ctypes.cdll[p])
+        except:
+          pass
     for dll in nt_dlls:
       try:
         a = dll.__getattr__(name)
