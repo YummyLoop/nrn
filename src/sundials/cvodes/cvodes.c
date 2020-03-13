@@ -1476,6 +1476,8 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
 
   // Debug, dump initial parameters to tmp file 
   //-----------------------------------------------------
+  //printf("hello?\n");
+  //printf("n: %ld, File at %s\n", cv_mem->cv_nst, get_current_dir_name());
   fprintf(dataFile, "t_start, %E\n", cv_mem->cv_tn);//time
   fprintf(dataFile, "h_start, %E\n", cv_mem->cv_h);//h
   fprintf(dataFile, "threshold, %E\n", cv_mem->cv_threshold);//custom eta threshold
