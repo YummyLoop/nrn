@@ -1409,7 +1409,7 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
   
   /* Check for yout != NULL */
   if ((y = yout) == NULL) {
-    if(errfp!=NULL) fprintf(errfp, MSGCVS_YOUT_NULL); 
+    if(errfp!=NULL) fprintf(errfp, MSGCVS_YOUT_NULL);
     fclose(dataFile);//debug file      
     return (CV_ILL_INPUT);
   }
@@ -1526,7 +1526,7 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
       nfQe++;
     }
 
-    h = hin; //hin = 0
+    h = hin;
     if ( (h != ZERO) && ((tout-tn)*h < ZERO) ) {
       if(errfp!=NULL) fprintf(errfp, MSGCVS_BAD_H0);
       fclose(dataFile);//debug file
@@ -1548,7 +1548,7 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
 
     if (istop) {
       if ( (tstop - tn)*h < ZERO ) {
-	      if(errfp!=NULL) fprintf(errfp, MSGCVS_BAD_TSTOP, tn);
+	if(errfp!=NULL) fprintf(errfp, MSGCVS_BAD_TSTOP, tn);
         fclose(dataFile);//debug file
         return(CV_ILL_INPUT);
       }
@@ -1663,7 +1663,7 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
       if ( ABS(tn - tstop) <= troundoff) {
         ier =  CVodeGetDky(cv_mem, tstop, 0, yout);
         if (ier != CV_SUCCESS) {
-	      if(errfp!=NULL) fprintf(errfp, MSGCVS_BAD_TSTOP, tn);
+	  if(errfp!=NULL) fprintf(errfp, MSGCVS_BAD_TSTOP, tn);
           fclose(dataFile);//debug file
           return (CV_ILL_INPUT);
         }
@@ -1708,9 +1708,9 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
         
       if ( (!ewtsetOK) || (!ewtSsetOK) || (!ewtQsetOK) ) {
 
-	      if(!ewtsetOK)  if(errfp!=NULL) fprintf(errfp, MSGCVS_EWT_NOW_BAD, tn);
+	if(!ewtsetOK)  if(errfp!=NULL) fprintf(errfp, MSGCVS_EWT_NOW_BAD, tn);
         if(!ewtSsetOK) if(errfp!=NULL) fprintf(errfp, MSGCVS_EWTS_NOW_BAD, tn);
-	      if(!ewtQsetOK) if(errfp!=NULL) fprintf(errfp, MSGCVS_EWTQ_NOW_BAD, tn);
+	if(!ewtQsetOK) if(errfp!=NULL) fprintf(errfp, MSGCVS_EWTQ_NOW_BAD, tn);
 
         istate = CV_ILL_INPUT;
         tretlast = *tret = tn;
@@ -1845,7 +1845,7 @@ int CVode(void *cvode_mem, realtype tout, N_Vector yout,
       ncfnS += ncfnS1[is];
     }
   }
-
+  
 
   // Debug, dump end values
   fprintf(dataFile, "t_end, %E\n", cv_mem->cv_tn); // time
@@ -3269,9 +3269,7 @@ static int CVStep(CVodeMem cv_mem)
   if ((nst > 0) && (hprime != h)) CVAdjustParams(cv_mem);
 
   /* Looping point for attempts to take a step */
-  //int nstepAttempts = 0; //debug
   loop {  
-    //nstepAttempts++;//debug
     CVPredict(cv_mem);  
     CVSet(cv_mem);
 
@@ -4454,6 +4452,7 @@ static void CVRestore(CVodeMem cv_mem, realtype saved_t)
   }
 }
 
+/*-----------------------------------------------------------------*/
 
 /*
  * CVDoErrorTest
@@ -4491,21 +4490,17 @@ static booleantype CVDoErrorTest(CVodeMem cv_mem, int *nflagPtr,
 
   /* If est. local error norm dsm passes test, return TRUE */  
   *dsmPtr = dsm; 
-  if (dsm <= ONE){
-    return (TRUE);
-  } 
+  if (dsm <= ONE) return (TRUE);
   
   /* Test failed; increment counters, set nflag, and restore zn array */
   (*nefPtr)++;
   netf++;
   *nflagPtr = PREV_ERR_FAIL;
-
   CVRestore(cv_mem, saved_t);
 
   /* At maxnef failures or |h| = hmin, return with kflag = REP_ERR_FAIL */
   if ((ABS(h) <= hmin*ONEPSM) || (*nefPtr == maxnef)) {
     *kflagPtr = REP_ERR_FAIL;
-    
     return (FALSE);
   }
 
@@ -4518,8 +4513,6 @@ static booleantype CVDoErrorTest(CVodeMem cv_mem, int *nflagPtr,
     eta = MAX(ETAMIN, MAX(eta, hmin / ABS(h)));
     if (*nefPtr >= SMALL_NEF) eta = MIN(eta, ETAMXF);
     CVRescale(cv_mem);
-    //printf("                | h: %E \n", cv_mem->cv_h); // for debug
-    
     return (FALSE);
   }
   
@@ -4531,7 +4524,6 @@ static booleantype CVDoErrorTest(CVodeMem cv_mem, int *nflagPtr,
     q--;
     qwait = L;
     CVRescale(cv_mem);
-    
     return (FALSE);
   }
 
@@ -4562,7 +4554,6 @@ static booleantype CVDoErrorTest(CVodeMem cv_mem, int *nflagPtr,
   
   return (FALSE);
 }
-
 
 /*-----------------------------------------------------------------*/
 
