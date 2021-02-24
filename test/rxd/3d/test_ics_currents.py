@@ -11,13 +11,13 @@ def ics_example(neuron_instance):
        currents.
     """
 
-    h, rxd, data = neuron_instance
+    h, rxd, data, save_path = neuron_instance
     rxd.set_solve_type(dimension=3)
     # create cell1 where `x` will be created and leak out
     cell1 = h.Section(name='cell1')
     cell1.pt3dclear()
-    cell1.pt3dadd(-20, 0, 0, 10)
-    cell1.pt3dadd(-10, 0, 0, 10)
+    cell1.pt3dadd(-1, 0, 0, 1)
+    cell1.pt3dadd(1, 0, 0, 1)
     cell1.nseg = 11
     cell1.insert('pump')
 
@@ -44,23 +44,25 @@ def ics_example(neuron_instance):
 def test_ics_currents(ics_example):
     """Test ics_example with fixed step methods"""
 
-    (h, rxd, data), model = ics_example
+    (h, rxd, data, save_path), model = ics_example
     h.finitialize(-65)
     h.continuerun(100)
 
-    max_err = compare_data(data)
-    assert max_err < tol
+    if not save_path: 
+        max_err = compare_data(data)
+        assert max_err < tol
 
 
 def test_ics_currents_cvode(ics_example):
     """Test ics_example with variable step methods"""
 
-    (h, rxd, data), model = ics_example
+    (h, rxd, data, save_path), model = ics_example
 
     h.CVode().active(True)
 
     h.finitialize(-65)
     h.continuerun(100)
 
-    max_err = compare_data(data)
-    assert max_err < tol
+    if not save_path: 
+        max_err = compare_data(data)
+        assert max_err < tol

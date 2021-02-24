@@ -10,17 +10,17 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+import subprocess
 
+sys.path.insert(0, os.path.abspath('.'))
 
 # -- Project information -----------------------------------------------------
 
 project = 'NEURON'
-copyright = '2019, Yale and the Blue Brain Project'
+copyright = '2021, Duke, Yale and the Blue Brain Project'
 author = 'Michael Hines'
-
 
 # -- General configuration ---------------------------------------------------
 
@@ -30,8 +30,26 @@ author = 'Michael Hines'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
-    #'nbsphinx'
+    'sphinx.ext.autosectionlabel',
+    'recommonmark',
+    'sphinx.ext.mathjax'
 ]
+
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.txt': 'markdown',
+    '.md': 'markdown',
+}
+
+import sphinx.writers.html
+import sphinx.ext.mathjax
+import html2
+
+
+def setup(app):
+    """Setup conntects events to the sitemap builder"""
+    app.set_translator('html', html2.HTMLTranslator)
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -40,7 +58,6 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'python/venv']
-
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -62,3 +79,24 @@ html_css_files = [
 ]
 
 nbsphinx_allow_errors = True
+
+if os.environ.get("READTHEDOCS"):
+    # Get RTD build version ('latest' for master and actual version for tags)
+    # Use alias PKGVER to avoid mixin' with sphinx and wasting lots of time on debugging that
+    from packaging import version as PKGVER
+
+    rtd_ver = PKGVER.parse(os.environ.get("READTHEDOCS_VERSION"))
+
+    # Install neuron accordingly (nightly for master, otherwise incoming version)
+    # Note that neuron wheel must be published a priori.
+    subprocess.run(
+        'pip install neuron{}'.format('=={}'.format(rtd_ver.base_version) if isinstance(rtd_ver, PKGVER.Version)
+                                      else '-nightly'),
+        shell=True,
+        check=True)
+
+    # Execute & convert notebooks + doxygen
+    subprocess.run("sh build_rtd.sh", check=True, shell=True)
+
+    # Add extra path to pickup doxygen output
+    html_extra_path = ['../build_rtd/docs']

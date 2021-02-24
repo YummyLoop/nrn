@@ -21,12 +21,15 @@ if test "$2" = "" ; then
 	exit
 fi
 
-CPU=$1
+#ignore $1 and use
+CPU=`uname -m`
 NRN_INSTALL=$2
 NRN_SRC=$3
 ivlibdir=$4
 export CPU
 export NRN_SRC
+NSRC=$NRN_SRC
+export NSRC #needed by nrnversion.sh
 NRN_VERSION="`sh $NRN_SRC/nrnversion.sh`"
 
 # Equivalent to install from the Makefile.am

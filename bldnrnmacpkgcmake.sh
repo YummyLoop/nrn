@@ -6,16 +6,19 @@ set -ex
 
 args="$*"
 if test "$args" = "" ; then
-  args="python2.7 python3.6 python3.7 python3.8"
+  args="python2.7 python3.6 python3.7 python3.8 python3.9"
 fi
 
 #10.7 possible if one builds with pythons that are consistent with that.
 export MACOSX_DEPLOYMENT_TARGET=10.9
 
 
-NRN_SRC=$HOME/neuron/nrncmake
+if test "$NRN_SRC" == "" ; then
+  NRN_SRC=$HOME/neuron/nrncmake
+fi
 NRN_BLD=$NRN_SRC/build
-export NRN_SRC
+NSRC=$NRN_SRC
+export NSRC
 NRN_VERSION="`sh $NRN_SRC/nrnversion.sh 3`"
 NEURON_NVER=NEURON-${NRN_VERSION}
 
@@ -42,6 +45,8 @@ cmake .. -DCMAKE_INSTALL_PREFIX=$NRN_INSTALL \
   -DNRN_PYTHON_DYNAMIC="$pythons" \
   -DIV_ENABLE_X11_DYNAMIC=ON \
   -DNRN_ENABLE_CORENEURON=OFF \
+  -DNRN_ENABLE_INTERNAL_READLINE=ON \
+  -DNRN_RX3D_OPT_LEVEL=2 \
   -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
 
 make -j install

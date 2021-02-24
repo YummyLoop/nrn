@@ -26,9 +26,9 @@ def _sort_secs(secs):
     for root in root_secs:
         all_sorted.wholetree(sec=root)
     secs_names = dict([(sec.hoc_internal_name(),sec) for sec in secs])
-    for sec in secs:
-        if sec.orientation():
-            raise RxDException('still need to deal with backwards sections')
+    #for sec in secs:
+    #    if sec.orientation():
+    #        raise RxDException('still need to deal with backwards sections')
     return [secs_names[sec.hoc_internal_name()] for sec in all_sorted if sec.hoc_internal_name() in secs_names]
 
 
@@ -41,7 +41,7 @@ class _c_region:
     def __init__(self, regions):
         global _c_region_lookup
         self._regions = [weakref.ref(r) for r in regions]
-        self._overlap = self._regions[0]()._secs1d
+        self._overlap = h.SectionList(self._regions[0]()._secs1d)
         self.num_regions = len(self._regions)
         self.num_species = 0
         self.num_params = 0
@@ -61,13 +61,18 @@ class _c_region:
         self._vptrs = None
         for rptr in self._regions:
             r = rptr()
-            self._overlap = [sec for sec in r._secs1d if sec in self._overlap]
+            self._overlap = h.SectionList([sec for sec in r._secs1d if sec in self._overlap])
             if r in _c_region_lookup:
                 _c_region_lookup[rptr].append(self)
             else:
                 _c_region_lookup[rptr] = [self]
    
     def add_reaction(self, rptr, region):
+        # for multicompartment reaction -- check all regions are present
+        if rptr() and hasattr(rptr(),'_changing_species'):
+            for sptr in rptr()._changing_species:
+                if sptr() and hasattr(sptr(),'_region') and sptr()._region not in self._regions:
+                    return
         if rptr in self._react_regions:
             if region not in self._react_regions[rptr]:
                 self._react_regions[rptr].append(region)
@@ -149,9 +154,7 @@ class _c_region:
             for sec in self._overlap:
                 for seg in sec:
                     (x,y,z) = species._xyz(seg)
-                    #TODO: Returns none, causing an error.
-                    node_idx = s().index_from_xyz(x,y,z)
-                    self.ecs_location_index[sid][seg_idx] = node_idx if node_idx else -1
+                    self.ecs_location_index[sid][seg_idx] = s().index_from_xyz(x,y,z)
                     seg_idx+=1
         self.ecs_location_index = self.ecs_location_index.transpose()
 
@@ -182,6 +185,8 @@ class _c_region:
         for rid, r in enumerate(self._regions):
             for sid, s in enumerate(self._react_species + self._react_params):
                 indices = s()._indices1d(r())
+                if len(indices) > self.num_segments:
+                    indices = s()._indices1d(r(), self._overlap)
                 try:
                     if indices == []:
                         self.location_index[rid][sid][:] = -1
@@ -295,6 +300,15 @@ class Region(object):
         # Note: this used to print out dimension, but that's now on a per-segment basis
         # TODO: remove the note when that is fully true
         return 'Region(..., nrn_region=%r, geometry=%r, dx=%r, name=%r)' % (self.nrn_region, self._geometry, self.dx, self._name)
+    
+    def __contains__(self, item):
+        try:
+            if item.region == self:
+                return True
+            else:
+                return False
+        except:
+            raise NotImplementedError()
 
     def _short_repr(self):
         if self._name is not None:
@@ -341,9 +355,9 @@ class Region(object):
         self._secs1d = []
         self._secs3d = []
         
-        dims = rxd._dimensions
+        dims = rxd._domain_lookup
         for sec in self._secs:
-            dim = dims[sec]
+            dim = dims(sec)
             if dim == 1:
                 self._secs1d.append(sec)
             elif dim == 3:
@@ -357,7 +371,7 @@ class Region(object):
         self._secs1d = _sort_secs(self._secs1d)
         
         if self._secs3d and not(hasattr(self._geometry, 'volumes3d')):
-            raise RxDException('selected geometry (%r) does not support 3d mode' % self._geometry)
+            raise RxDException('selected geometry (%r) does not support 3d mode (no "volumes3d" attr)' % self._geometry)
         
 
         if self._secs3d:
@@ -416,6 +430,7 @@ class Region(object):
         assert(position in (0, 1))
         # NOTE: some care is necessary in constructing normal vector... must be
         #       based on end frusta, not on vector between end points
+        dx = self.dx
         if position == 0:
             x = sec.x3d(0)
             y = sec.y3d(0)
@@ -428,16 +443,19 @@ class Region(object):
             x = sec.x3d(n - 1)
             y = sec.y3d(n - 1)
             z = sec.z3d(n - 1)
-            # NOTE: sign of the normal is irrelevant
             nx = x - sec.x3d(n - 2)
             ny = y - sec.y3d(n - 2)
             nz = z - sec.z3d(n - 2)
+            x -= dx * nx / (nx**2 + ny**2 + nz**2)**0.5
+            y -= dx * ny / (nx**2 + ny**2 + nz**2)**0.5
+            z -= dx * nz / (nx**2 + ny**2 + nz**2)**0.5
+
         else:
             raise RxDException('should never get here')
         #dn = (nx**2 + ny**2 + nz**2)**0.5
         #nx, ny, nz = nx/dn, ny/dn, nz/dn
         # x, y, z = x * x1 + (1 - x) * x0, x * y1 + (1 - x) * y0, x * z1 + (1 - x) * z1
-        r = sec(position).diam * 0.5 + self.dx
+        r = sec(position).diam * 0.5 + self.dx * 3 ** 0.5
         plane_of_disc = geometry3d.graphicsPrimitives.Plane(x, y, z, nx, ny, nz)
         potential_coordinates = []
 
@@ -495,6 +513,8 @@ class Region(object):
             self.secs = secs
         else:
             self.secs = [secs]
+        if secs == [] or secs == None:
+            warnings.warn("Warning: No sections. Region 'secs' should be a list of NEURON sections.")
         from nrn import Section
         for sec in self.secs:
             if not isinstance(sec,Section):
@@ -507,6 +527,13 @@ class Region(object):
             import neuron
             neuron.rxd.set_solve_type(secs, dimension=dimension)
         self._name = name
+        if dx is not None:
+            try:
+                dx = float(dx)
+            except:
+                dx = -1
+            if dx <= 0:
+                raise RxDException("dx must be a positive real number or None")
         self.dx = dx
         _all_regions.append(weakref.ref(self))
 

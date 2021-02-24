@@ -9,7 +9,7 @@ DEFS = -Dmotif_kit -Dsgi_motif_kit -Dopenlook_kit -Dbw_kit \
 # vanilla interviews is also installed, we don't use it.
 IV_INCLUDES = @IV_INCLUDE@ $(X_CFLAGS)
 nsrc=$(top_srcdir)/src
-includes = -I$(nsrc)/gnu -I$(nsrc)/mesch -I$(top_builddir)/src/oc -I$(nsrc)/oc -I$(nsrc)/nrnmpi $(IV_INCLUDES)
+includes = -I$(nsrc)/gnu -I$(nsrc)/mesch -I$(top_builddir)/src/oc -I$(nsrc)/oc -I$(nsrc)/nrnmpi -I$(nsrc)/nrnoc $(IV_INCLUDES)
 
 IV_LIBS = @IV_LIBS_LIBTOOL@
 IVOS_DIR = @IVOS_DIR@
@@ -68,7 +68,7 @@ noinst_HEADERS = apwindow.h axis.h bndedval.h cbwidget.h checkpnt.h \
 	ocglyph.h ocinput.h ocjump.h oclist.h ocmatrix.h ocobserv.h \
 	ocpicker.h ocpointer.h random1.h rect.h rubband.h scenepic.h \
 	scenevie.h symchoos.h symdir.h utility.h ivocvect.h xmenu.h \
-	nrngsl.h nrngsl_hc_radix2.c nrngsl_real_radix2.c \
+	nrngsl.h nrngsl_hc_radix2.cpp nrngsl_real_radix2.cpp \
 	grglyph.h nrnmutdec.h ocnotify.h ocptrvector.h bimap.hpp \
 	nrnsymdiritem.h
 

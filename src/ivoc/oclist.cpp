@@ -23,15 +23,20 @@
 #include "objcmd.h"
 #endif
 
-extern "C" {
-#include "parse.h"
+#include "gui-redirect.h"
+
+#include "parse.hpp"
 extern Object** hoc_temp_objptr(Object*);
 extern Symlist* hoc_top_level_symlist;
 int ivoc_list_count(Object*);
-Object* ivoc_list_item(Object*, int);
-}
+extern "C" Object* ivoc_list_item(Object*, int);
 
-extern "C" int hoc_return_type_code;
+
+extern Object** (*nrnpy_gui_helper_)(const char* name, Object* obj);
+extern double (*nrnpy_object_to_double_)(Object*);
+
+extern int hoc_return_type_code;
+
 void handle_old_focus();
 
 #if HAVE_IV
@@ -249,35 +254,37 @@ void OcList::remove_all() {
 }
 
 static double l_browser(void* v) {
-#if HAVE_IV
-IFGUI
-	char* s = 0;
-	char* i = 0;
-	char** p = 0;
-	OcList* o = (OcList*)v;
-	if (ifarg(1)) {
-		s = gargstr(1);
-	}
-	if (ifarg(3)) {
-		i = gargstr(3);
-		p = hoc_pgargstr(2);
-		o->create_browser(s, p, i);
-		return 1.;
-	}
-	if (ifarg(2)) {
-		if (hoc_is_object_arg(2)) {
-			o->create_browser(s, NULL, *hoc_objgetarg(2));
+	TRY_GUI_REDIRECT_METHOD_ACTUAL_DOUBLE("List.browser", list_class_sym_, v);
+	#if HAVE_IV
+	IFGUI
+		char* s = 0;
+		char* i = 0;
+		char** p = 0;
+		OcList* o = (OcList*)v;
+		if (ifarg(1)) {
+			s = gargstr(1);
+		}
+		if (ifarg(3)) {
+			i = gargstr(3);
+			p = hoc_pgargstr(2);
+			o->create_browser(s, p, i);
 			return 1.;
 		}
-		i = gargstr(2);
-	}
-	o->create_browser(s, i);
-ENDGUI
-#endif
+		if (ifarg(2)) {
+			if (hoc_is_object_arg(2)) {
+				o->create_browser(s, NULL, *hoc_objgetarg(2));
+				return 1.;
+			}
+			i = gargstr(2);
+		}
+		o->create_browser(s, i);
+	ENDGUI
+	#endif
 	return 1.;
 }
 
 static double l_select(void* v) {
+	TRY_GUI_REDIRECT_METHOD_ACTUAL_DOUBLE("List.select", list_class_sym_, v);
 #if HAVE_IV
 IFGUI
 	OcListBrowser* b = ((OcList*)v)->browser();
@@ -290,6 +297,7 @@ ENDGUI
 	return 1.;
 }
 static double l_select_action(void* v) {
+	TRY_GUI_REDIRECT_METHOD_ACTUAL_DOUBLE("List.select_action", list_class_sym_, v);
 #if HAVE_IV
 IFGUI
 	OcListBrowser* b = ((OcList*)v)->browser();
@@ -310,6 +318,7 @@ ENDGUI
 }
 static double l_selected(void* v) {
 	hoc_return_type_code = 1; // integer
+	TRY_GUI_REDIRECT_METHOD_ACTUAL_DOUBLE("List.selected", list_class_sym_, v);
 #if HAVE_IV
 	long i = -1;
 IFGUI
@@ -326,6 +335,7 @@ ENDGUI
 #endif
 }
 static double l_accept_action(void* v) {
+	TRY_GUI_REDIRECT_METHOD_ACTUAL_DOUBLE("List.accept_action", list_class_sym_, v);
 #if HAVE_IV
 IFGUI
 	OcListBrowser* b = ((OcList*)v)->browser();
@@ -342,6 +352,7 @@ ENDGUI
 }
 
 static double l_scroll_pos(void* v) {
+	TRY_GUI_REDIRECT_METHOD_ACTUAL_DOUBLE("List.scroll_pos", list_class_sym_, v);
 #if HAVE_IV
 IFGUI
 	OcList* o = (OcList*)v;
@@ -405,7 +416,7 @@ int ivoc_list_count(Object* olist) {
 	OcList* list = (OcList*)olist->u.this_pointer;
 	return list->count();
 }
-Object* ivoc_list_item(Object* olist, int i) {
+extern "C" Object* ivoc_list_item(Object* olist, int i) {
 	chk_list(olist);
 	OcList* list = (OcList*)olist->u.this_pointer;
 	if (i >= 0 && i < list->count()) {
@@ -495,7 +506,6 @@ void OcList_reg() {
 	list_class_sym_ = hoc_lookup("List");
 }
 
-extern "C" {
 extern bool hoc_objectpath_impl(Object* ob, Object* oblook, char* path, int depth);
 extern void hoc_path_prepend(char*, const char*, const char*);
 int ivoc_list_look(Object* ob, Object* oblook, char* path, int) {
@@ -520,7 +530,6 @@ int ivoc_list_look(Object* ob, Object* oblook, char* path, int) {
 	}
 	return 0;
 }	
-}
 
 void OcList::create_browser(const char* name, const char* items, Object* pystract) {
 #if HAVE_IV
@@ -533,7 +542,7 @@ void OcList::create_browser(const char* name, const char* items, Object* pystrac
 	PrintableWindow* w = new StandardWindow(b_->standard_glyph());
 	b_->ocglyph(w);
 	if (name) {
-		w->name((char*)name);
+		w->name(name);
 	}
 	w->map();	
 #endif
@@ -550,7 +559,7 @@ void OcList::create_browser(const char* name, char** pstr, const char* action) {
 	PrintableWindow* w = new StandardWindow(b_->standard_glyph());
 	b_->ocglyph(w);
 	if (name) {
-		w->name((char*)name);
+		w->name(name);
 	}
 	w->map();	
 #endif

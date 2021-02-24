@@ -14,6 +14,11 @@
 #include "oc2iv.h"
 #endif  /* HAVE_IV */
 #include "classreg.h"
+#include "gui-redirect.h"
+
+extern Object** (*nrnpy_gui_helper_)(const char* name, Object* obj);
+extern double (*nrnpy_object_to_double_)(Object*);
+
 #if HAVE_IV
 class SpecialPatch : public Patch {
 public:
@@ -67,6 +72,7 @@ public:
 #endif  /* HAVE_IV */
 
 static void* cons(Object*) {
+	TRY_GUI_REDIRECT_OBJ("Deck", NULL);
 #if HAVE_IV
 	OcDeck* b = NULL;
 IFGUI
@@ -75,11 +81,12 @@ IFGUI
 ENDGUI
 	return (void*)b;
 #else 
-	return (void*)0;
+	return nullptr;
 #endif /* HAVE_IV  */
 }
 	
 static void destruct(void* v) {
+	TRY_GUI_REDIRECT_NO_RETURN("~Deck", v);
 #if HAVE_IV
 IFGUI
 	OcDeck* b = (OcDeck*)v;
@@ -92,6 +99,7 @@ ENDGUI
 }
 
 static double intercept(void* v) {
+	TRY_GUI_REDIRECT_ACTUAL_DOUBLE("Deck.intercept", v);
 #if HAVE_IV
 	bool b = int(chkarg(1, 0., 1.));
 IFGUI
@@ -104,6 +112,7 @@ ENDGUI
 }
 
 static double map(void* v) {
+	TRY_GUI_REDIRECT_ACTUAL_DOUBLE("Deck.map", v);
 #if HAVE_IV
 IFGUI
 	OcDeck* b = (OcDeck*)v;
@@ -127,6 +136,7 @@ ENDGUI
 }
 
 static double unmap(void* v) {
+	TRY_GUI_REDIRECT_ACTUAL_DOUBLE("Deck.unmap", v);
 #if HAVE_IV
 IFGUI
 	OcDeck* b = (OcDeck*)v;
@@ -141,6 +151,7 @@ ENDGUI
 }
 
 static double save(void* v) {
+	TRY_GUI_REDIRECT_ACTUAL_DOUBLE("Deck.save", v);
 #if HAVE_IV
 IFGUI
 	OcDeck* b = (OcDeck*)v;
@@ -166,6 +177,7 @@ ENDGUI
 }
 
 static double flip_to(void* v) {
+	TRY_GUI_REDIRECT_ACTUAL_DOUBLE("Deck.flip_to", v);
 #if HAVE_IV
 	int i = -1;
 IFGUI
@@ -180,6 +192,7 @@ ENDGUI
 }
 
 static double remove_last(void* v) {
+	TRY_GUI_REDIRECT_ACTUAL_DOUBLE("Deck.remove_last", v);
 #if HAVE_IV
 IFGUI
 	((OcDeck*)v)->remove_last();
@@ -191,6 +204,7 @@ ENDGUI
 }
 
 static double remove(void* v) {
+	TRY_GUI_REDIRECT_ACTUAL_DOUBLE("Deck.remove", v);
 #if HAVE_IV
 IFGUI
 	OcDeck* b = (OcDeck*)v;
@@ -203,6 +217,7 @@ ENDGUI
 }
 
 static double move_last(void* v) {
+	TRY_GUI_REDIRECT_ACTUAL_DOUBLE("Deck.move_last", v);
 #if HAVE_IV
 IFGUI
 	OcDeck* b = (OcDeck*)v;

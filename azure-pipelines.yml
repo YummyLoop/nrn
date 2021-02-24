@@ -1,0 +1,146 @@
+#=============================================================================
+# Azure Pipeline settings
+#=============================================================================
+
+# Nightly build master for pypi upload
+schedules:
+- cron: "0 0 * * *"
+  branches:
+    include:
+    - master
+  always: true
+
+# Auto cancel old PR builds
+pr:
+  autoCancel: true
+
+# Trigger build for certain branches only
+trigger:
+- master
+- releases/*
+
+jobs:
+
+- job: 'ManyLinuxWheels'
+  timeoutInMinutes: 30
+  pool:
+    vmImage: 'ubuntu-18.04'
+  strategy:
+    matrix:
+      Python35:
+        python.version: '3.5'
+      Python36:
+        python.version: '3.6'
+      Python37:
+        python.version: '3.7'
+      Python38:
+        python.version: '3.8'
+      Python39:
+        python.version: '3.9'
+  steps:
+  - script: |
+      docker run --rm \
+        -w /root/nrn \
+        -v $PWD:/root/nrn \
+        -e NEURON_NIGHTLY_TAG \
+        -e NRN_NIGHTLY_UPLOAD \
+        -e NRN_RELEASE_UPLOAD \
+        -e NEURON_WHEEL_VERSION \
+        -e NRN_BUILD_FOR_UPLOAD=1 \
+        'neuronsimulator/neuron_wheel' \
+        packaging/python/build_wheels.bash linux $(python.version)
+    displayName: 'Building ManyLinux Wheel'
+
+  - script: |
+      sudo apt update
+      sudo apt install -y mpich openmpi-bin libopenmpi-dev libmpich-dev
+    displayName: 'Install Test System Depdendencies'
+
+  - template: ci/azure-wheel-test-upload.yml
+
+
+# Jobs to build OSX wheels natively
+- job: 'MacOSWheels'
+  timeoutInMinutes: 30
+  pool:
+    vmImage: 'macOS-10.15'
+  strategy:
+    matrix:
+      Python35:
+        python.version: '3.5'
+        python.org.version: '3.5.4'
+      Python36:
+        python.version: '3.6'
+        python.org.version: '3.6.8'
+      Python37:
+        python.version: '3.7'
+        python.org.version: '3.7.7'
+      Python38:
+        python.version: '3.8'
+        python.org.version: '3.8.2'
+      Python39:
+        python.version: '3.9'
+        python.org.version: '3.9.0'
+  steps:
+
+  - script: |
+      if [ "$(python.org.version)" == "3.5.4" ]; then
+        installer=python-$(python.org.version)-macosx10.6.pkg
+      else
+        installer=python-$(python.org.version)-macosx10.9.pkg
+      fi
+      url=https://www.python.org/ftp/python/$(python.org.version)/$installer
+      curl $url -o $installer
+      sudo installer -pkg $installer -target /
+    displayName: 'Install Python from python.org'
+
+  - script: |
+      brew install --cask xquartz
+      brew install flex bison mpich
+      brew unlink mpich && brew install openmpi
+      cmake --version
+    displayName: 'Install OSX System Dependencies'
+
+  - script: |
+      export MACOSX_DEPLOYMENT_TARGET=10.9
+      export PATH=/usr/local/opt/flex/bin:/usr/local/opt/bison/bin:$PATH
+      export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+      export NRN_BUILD_FOR_UPLOAD=1
+      packaging/python/build_wheels.bash osx $(python.version)
+    displayName: 'Build MacOS Wheel'
+
+  - template: ci/azure-wheel-test-upload.yml
+
+
+# Jobs to build NEURON installer natively
+- job: 'WindowsInstaller'
+  timeoutInMinutes: 45
+  pool:
+    vmImage: windows-2019
+  variables:
+    MSYS2_ROOT: C:\msys64
+
+  steps:
+
+  - task: BatchScript@1
+    inputs:
+      filename: ci/win_download_deps.cmd
+    displayName: "Download Dependencies"
+    condition: succeeded()
+
+  - task: BatchScript@1
+    inputs:
+      filename: ci/win_install_deps.cmd
+    displayName: "Install Dependencies"
+    condition: succeeded()
+
+  # WSL is enabled by default in the image, with no installed linux distribution.
+  # WSL creates an unusable `bash.EXE` that can be resolved first from the environment.
+  # This is why we remove that file.
+  - script: |
+      rm.exe "C:/WINDOWS/system32/bash.EXE"
+      %MSYS2_ROOT%\usr\bin\bash -lc "$BUILD_SOURCESDIRECTORY/ci/win_build_cmake.sh"
+    displayName: "Build and Create Installer"
+    condition: succeeded()
+
+  - template: ci/azure-win-installer-upload.yml

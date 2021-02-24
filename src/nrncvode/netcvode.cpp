@@ -15,7 +15,7 @@
 #include <InterViews/regexp.h>
 #include "classreg.h"
 #include "nrnoc2iv.h"
-#include "parse.h"
+#include "parse.hpp"
 #include "cvodeobj.h"
 #include "hoclist.h"
 #include "pool.h"
@@ -41,8 +41,8 @@
 #include "netcon.h"
 #include "netcvode.h"
 #include "htlist.h"
-#include "nrnbbcore_write.h"
 #include "sundialstypes.h"
+#include "nrncore_write/utils/nrncore_utils.h"
 
 typedef void (*ReceiveFunc)(Point_process*, double*, double);
 
@@ -60,11 +60,12 @@ typedef void (*ReceiveFunc)(Point_process*, double*, double);
 // needs to be fired to execute the NET_RECEIVE block.
 //#define POINT_RECEIVE(type, tar, w, f) ns->point_receive(type, tar, w, f)
 
-extern "C" {
 #include "membfunc.h"
 extern void single_event_run();
 extern void setup_topology(), v_setup_vectors();
-extern int structure_change_cnt, v_structure_change, tree_changed, nrn_matrix_cnt_;
+extern "C" int structure_change_cnt;
+extern int v_structure_change;
+extern int tree_changed, nrn_matrix_cnt_;
 extern int diam_changed;
 extern int nrn_errno_check(int);
 extern void nrn_ba(NrnThread*, int);
@@ -84,21 +85,21 @@ extern ReceiveFunc* pnt_receive_init;
 extern short* pnt_receive_size;
 extern short* nrn_is_artificial_; // should be bool but not using that type in c
 extern short* nrn_artcell_qindex_;
-void net_send(void**, double*, Point_process*, double, double);
-void net_move(void**, Point_process*, double);
-void artcell_net_send(void**, double*, Point_process*, double, double);
-void artcell_net_move(void**, Point_process*, double);
+extern "C" void net_send(void**, double*, Point_process*, double, double);
+extern "C" void net_move(void**, Point_process*, double);
+extern "C" void artcell_net_send(void**, double*, Point_process*, double, double);
+extern "C" void artcell_net_move(void**, Point_process*, double);
 int nrn_use_selfqueue_;
 void nrn_pending_selfqueue(double tt, NrnThread*);
 static void all_pending_selfqueue(double tt);
 static void* pending_selfqueue(NrnThread*);
-void net_event(Point_process*, double);
-void _nrn_watch_activate(Datum*, double (*)(Point_process*), int, Point_process*, int, double);
-void _nrn_free_watch(Datum*, int, int);
+extern "C" void net_event(Point_process*, double);
+extern "C" void _nrn_watch_activate(Datum*, double (*)(Point_process*), int, Point_process*, int, double);
+extern "C" void _nrn_free_watch(Datum*, int, int);
 extern int hoc_araypt(Symbol*, int);
 extern int hoc_stacktype();
-extern Point_process* ob2pntproc(Object*);
-extern Point_process* ob2pntproc_0(Object*);
+extern "C" Point_process* ob2pntproc(Object*);
+extern "C" Point_process* ob2pntproc_0(Object*);
 void nrn_use_daspk(int);
 extern int nrn_use_daspk_;
 int linmod_extra_eqn_count();
@@ -110,25 +111,25 @@ extern hoc_Item* net_cvode_instance_psl();
 extern PlayRecList* net_cvode_instance_prl();
 extern void nrn_update_ps2nt();
 extern void nrn_use_busywait(int);
-extern double* nrn_recalc_ptr(double*);
+extern "C" double* nrn_recalc_ptr(double*);
 void* nrn_interthread_enqueue(NrnThread*);
 extern void (*nrnthread_v_transfer_)(NrnThread*);
 Object* (*nrnpy_seg_from_sec_x)(Section*, double);
-void nrnthread_get_trajectory_requests(int tid, int& bsize, int& n_pr, void**& vpr, int& n_trajec, int*& types, int*& indices, double**& pvars, double**& varrays);
-void nrnthread_trajectory_values(int tid, int n_pr, void** vpr, double t);
-void nrnthread_trajectory_return(int tid, int n_pr, int vecsz, void** vpr, double t);
+extern "C" void nrnthread_get_trajectory_requests(int tid, int& bsize, int& n_pr, void**& vpr, int& n_trajec, int*& types, int*& indices, double**& pvars, double**& varrays);
+extern "C" void nrnthread_trajectory_values(int tid, int n_pr, void** vpr, double t);
+extern "C" void nrnthread_trajectory_return(int tid, int n_pr, int vecsz, void** vpr, double t);
 bool nrn_trajectory_request_per_time_step_ = false;
 #if NRN_MUSIC
 extern void nrnmusic_injectlist(void*, double);
 #endif
 
-extern "C" int hoc_return_type_code;
+extern int hoc_return_type_code;
 
 extern int nrn_fornetcon_cnt_;
 extern int* nrn_fornetcon_index_;
 extern int* nrn_fornetcon_type_;
 void _nrn_free_fornetcon(void**);
-int _nrn_netcon_args(void*, double***);
+//int _nrn_netcon_args(void*, double***);
 
 // for use in mod files
 double nrn_netcon_get_delay(NetCon* nc) { return nc->delay_; }
@@ -137,7 +138,7 @@ int nrn_netcon_weight(NetCon* nc, double** pw) {
 	*pw = nc->weight_;
 	return nc->cnt_;
 }
-double nrn_event_queue_stats(double* stats) {
+extern "C" double nrn_event_queue_stats(double* stats) {
 #if COLLECT_TQueue_STATISTICS
 	net_cvode_instance_event_queue(nrn_threads)->spike_stat(stats);  
 	return (stats[0]-stats[2]);
@@ -237,7 +238,6 @@ void nrn2ncs_netcons();
 #if NRNMPI
 extern void nrn2ncs_outputevent(int netcon_output_index, double firetime);
 #endif
-}; //extern "C"
 
 #if BGPDMA
 extern void bgp_dma_send(PreSyn*, double t);
@@ -2287,7 +2287,7 @@ int Cvode::handle_step(NetCvode* ns, double te) {
 	return err;
 }
 
-void net_move(void** v, Point_process* pnt, double tt) {
+extern "C" void net_move(void** v, Point_process* pnt, double tt) {
 	if (!(*v)) {
 		hoc_execerror( "No event with flag=1 for net_move in ", hoc_object_name(pnt->ob));
 	}
@@ -2304,7 +2304,7 @@ void net_move(void** v, Point_process* pnt, double tt) {
 	net_cvode_instance->move_event(q, tt, PP2NT(pnt));
 }
 
-void artcell_net_move(void** v, Point_process* pnt, double tt) {
+extern "C" void artcell_net_move(void** v, Point_process* pnt, double tt) {
     if (nrn_use_selfqueue_) {
 	if (!(*v)) {
 		hoc_execerror( "No event with flag=1 for net_move in ", hoc_object_name(pnt->ob));
@@ -2359,7 +2359,7 @@ void NetCvode::remove_event(TQItem* q, int tid) {
 
 // for threads, revised net_send to use absolute time (in the
 // mod file we add the thread time when we call it).
-void net_send(void** v, double* weight, Point_process* pnt, double td, double flag) {
+extern "C" void net_send(void** v, double* weight, Point_process* pnt, double td, double flag) {
 	STATISTICS(SelfEvent::selfevent_send_);
 	NrnThread* nt = PP2NT(pnt);
 	NetCvodeThreadData& p = net_cvode_instance->p[nt->id];
@@ -2394,7 +2394,7 @@ void net_send(void** v, double* weight, Point_process* pnt, double td, double fl
 //printf("net_send %g %s %g %p\n", td, hoc_object_name(pnt->ob), flag, *v);
 }
 
-void artcell_net_send(void** v, double* weight, Point_process* pnt, double td, double flag) {
+extern "C" void artcell_net_send(void** v, double* weight, Point_process* pnt, double td, double flag) {
     if (nrn_use_selfqueue_ && flag == 1.0) {
 	STATISTICS(SelfEvent::selfevent_send_);
 	NrnThread* nt = PP2NT(pnt);
@@ -2428,7 +2428,7 @@ void artcell_net_send(void** v, double* weight, Point_process* pnt, double td, d
     }
 }
 
-void net_event(Point_process* pnt, double time) {
+extern "C" void net_event(Point_process* pnt, double time) {
 	STATISTICS(net_event_cnt_);
 	PreSyn* ps = (PreSyn*)pnt->presyn_;
 	if (ps) {
@@ -2450,7 +2450,7 @@ void net_event(Point_process* pnt, double time) {
 	}
 }
 
-void _nrn_watch_activate(Datum* d, double (*c)(Point_process*), int i, Point_process* pnt, int r, double flag) {
+extern "C" void _nrn_watch_activate(Datum* d, double (*c)(Point_process*), int i, Point_process* pnt, int r, double flag) {
 //	printf("_nrn_cond_activate %s flag=%g first return = %g\n", hoc_object_name(pnt->ob), flag, c(pnt));
 	if (!d->_pvoid) {
 		d->_pvoid = (void*)new WatchList();
@@ -2476,7 +2476,7 @@ void _nrn_watch_activate(Datum* d, double (*c)(Point_process*), int i, Point_pro
 	wc->activate(flag);
 }
 
-void _nrn_free_watch(Datum* d, int offset, int n) {
+extern "C" void _nrn_free_watch(Datum* d, int offset, int n) {
 	int i;
 	int nn = offset + n;
 	if (d[offset]._pvoid) {
@@ -2510,7 +2510,7 @@ TQItem* NetCvode::fifo_event(double td, DiscreteEvent* db) {
 	if (print_event_) { db->pr("send", td, this); }
 	if (vec_event_store_) {
 		Vect* x = vec_event_store_;
-		int n = x->capacity();
+		int n = x->size();
 		x->resize_chunk(n+2);
 		x->elem(n) = t;
 		x->elem(n+1) = td;
@@ -2533,10 +2533,8 @@ TQItem* NetCvode::bin_event(double td, DiscreteEvent* db, NrnThread* nt) {
 	if (vec_event_store_) {
 		assert(0);
 		Vect* x = vec_event_store_;
-		int n = x->capacity();
-		x->resize_chunk(n+2);
-		x->elem(n) = nt_t;
-		x->elem(n+1) = td;
+        x->push_back(nt_t);
+        x->push_back(td);
 	}
 #endif
 	return p[nt->id].tqe_->enqueue_bin(td, db);
@@ -2556,10 +2554,8 @@ TQItem* NetCvode::event(double td, DiscreteEvent* db, NrnThread* nt) {
 	if (print_event_) { db->pr("send", td, this); }
 	if (vec_event_store_) {
 		Vect* x = vec_event_store_;
-		int n = x->capacity();
-		x->resize_chunk(n+2);
-		x->elem(n) = nt_t;
-		x->elem(n+1) = td;
+        x->push_back(nt_t);
+        x->push_back(td);
 	}
 #endif
 	return p[nt->id].tqe_->insert(td, db);
@@ -2917,9 +2913,7 @@ static IvocVect* peqvec; //if not nil then the sorted times on the event queue.
 static void peq(const TQItem*, int);
 static void peq(const TQItem* q, int) {
 	if (peqvec) {
-		int n = peqvec->capacity();
-		peqvec->resize_chunk(n+1);
-		peqvec->elem(n) = q->t_;
+        peqvec->push_back(q->t_);
 	}else{
 		DiscreteEvent* d = (DiscreteEvent*)q->data_;
 		d->pr("", q->t_, net_cvode_instance);
@@ -2948,23 +2942,20 @@ static void event_info_callback(const TQItem* q, int) {
 	NetCon* nc;
 	PreSyn* ps;
 	SelfEvent* se;
-	int n = event_info_tvec_->capacity();
+	int n = event_info_tvec_->size();
 	switch(d->type()) {
 	case NetConType:
 		if (event_info_type_ == NetConType) {
 			nc = (NetCon*)d;
-			event_info_tvec_->resize_chunk(n+1);
-			event_info_tvec_->elem(n) = q->t_;
+            event_info_tvec_->push_back(q->t_);
 			event_info_list_->append(nc->obj_);
 		}
 		break;
 	case SelfEventType:
 		if (event_info_type_ == SelfEventType) {
 			se = (SelfEvent*)d;
-			event_info_tvec_->resize_chunk(n+1);
-			event_info_tvec_->elem(n) = q->t_;
-			event_info_flagvec_->resize_chunk(n+1);
-			event_info_flagvec_->elem(n) = se->flag_;
+            event_info_tvec_->push_back(q->t_);
+            event_info_flagvec_->push_back(se->flag_);
 			event_info_list_->append(se->target_->ob);
 		}
 		break;
@@ -2974,8 +2965,7 @@ static void event_info_callback(const TQItem* q, int) {
 			for (int i = ps->dil_.count()-1; i >= 0; --i) {
 				nc = ps->dil_.item(i);
 				double td = nc->delay_ - ps->delay_;
-				event_info_tvec_->resize_chunk(n+1);
-				event_info_tvec_->elem(n) = q->t_ + td;
+                event_info_tvec_->push_back(q->t_ + td);
 				event_info_list_->append(nc->obj_);
 				++n;
 			}
@@ -3034,7 +3024,7 @@ void NetCon::send(double tt, NetCvode* ns, NrnThread* nt) {
 		STATISTICS(netcon_send_inactive_);
 	}
 }
-	
+
 void NetCon::deliver(double tt, NetCvode* ns, NrnThread* nt) {
 	assert(target_);
 if (PP2NT(target_) != nt) {
@@ -3051,7 +3041,7 @@ Printf("NetCon::deliver nt=%d target=%d\n", nt->id, PP2NT(target_)->id);
 			SelfEvent* se = (SelfEvent*)ns->p[nt->id].selfqueue_->remove(q);
 //printf("%d NetCon::deliver %g , earlier selfevent at %g\n", nrnmpi_myid, tt, q->t_);
 			se->deliver(t1, ns, nt);
-		}	
+		}
 	}
 	if (cvode_active_ && cv) {
 		ns->local_retreat(tt, cv);
@@ -3160,7 +3150,7 @@ void PreSyn::send(double tt, NetCvode* ns, NrnThread* nt) {
 	}
 #endif //USENCS || NRNMPI
 }
-	
+
 void PreSyn::deliver(double tt, NetCvode* ns, NrnThread* nt) {
 	if (qthresh_) {
 		// the thread is the one that owns the PreSyn
@@ -3278,7 +3268,7 @@ DiscreteEvent* SelfEvent::savestate_read(FILE* f) {
 	se->target_ = SelfEvent::index2pp(pptype, ppindex);
 #endif
 	se->weight_ = nil;
-	if (ncindex >= 0) {	
+	if (ncindex >= 0) {
 #if 0
 		// extremely inefficient. There are a LOT of NetCon.
 		obj = hoc_name2obj("NetCon", ncindex);
@@ -3397,7 +3387,7 @@ hoc_warning("errno set during SelfEvent deliver to NET_RECEIVE", (char*)0);
 	--nctd.unreffed_event_cnt_;
 	nctd.sepool_->hpfree(this);
 }
-	
+
 void SelfEvent::pr(const char* s, double tt, NetCvode* ns) {
 	Printf("%s", s);
 	Printf(" SelfEvent target=%s %.15g flag=%g\n", hoc_object_name(target_->ob), tt, flag_);
@@ -3423,7 +3413,7 @@ void PlayRecordEvent::pr(const char* s, double tt, NetCvode* ns) {
 	plr_->pr();
 }
 
-// For localstep makes sure all cvode instances are at this time and 
+// For localstep makes sure all cvode instances are at this time and
 // makes sure the continuous record records values at this time.
 TstopEvent::TstopEvent() {}
 TstopEvent::~TstopEvent() {}
@@ -3529,7 +3519,7 @@ void neosim2nrn_advance(void* e, void* v, double tout) {
 	neosim_entity_ = e;
 	NetCon* d = (NetCon*)v;
 	TQueue* tqe;
-		
+
 	// now can integrate to tout since it is guaranteed there will
 	// be no further real events to this cell before tout.
 	// but we must handle self events. The implementation is
@@ -3540,7 +3530,7 @@ void neosim2nrn_advance(void* e, void* v, double tout) {
 	// artificial cells will work.
 	t = cv->time();
 	while (tout > t) {
-		do { 
+		do {
 			cv->check_deliver();
 		}while (neosim_deliver_self_events(tqe, t));
 		cv->solve();
@@ -3567,7 +3557,7 @@ int NetCvode::pgvts(double tstop) {
 	}
 	return err;
 }
-	
+
 // parallel global variable time-step event handling
 // return is what cvode call to make and the value of tt to make it at
 // in response to the next global event. We try to do only one
@@ -3646,7 +3636,7 @@ DiscreteEvent* NetCvode::pgvts_least(double& tt, int& op, int& init) {
 			p[0].tqe_->remove(q);
 		}
 	}else if (op == 4) {//NetParEvent need to be done all together
-		p[0].tqe_->remove(q); 
+		p[0].tqe_->remove(q);
 	}else if (ts == tt && q && ops == op) { // safe to do this event as well
 		p[0].tqe_->remove(q);
 	}else{
@@ -3810,7 +3800,7 @@ void nrn2ncs_netcons() {
 		nc = (NetCon*)(list->object(i)->u.this_pointer);
 		ncs2nrn_input_->append(nc);
 	}
-	
+
 	o = *hoc_objgetarg(2);
 	check_obj_type(o, "List");
 	list = (OcList*)(o->u.this_pointer);
@@ -4046,14 +4036,14 @@ ForNetConsInfo* fnc = (ForNetConsInfo*)pnt->prop->dparam[t2i[pnt->prop->type]]._
 	delete [] t2i;
 }
 
-int _nrn_netcon_args(void* v, double*** argslist) {
+extern "C" int _nrn_netcon_args(void* v, double*** argslist) {
 	ForNetConsInfo* fnc = (ForNetConsInfo*)v;
 	assert(fnc);
 	*argslist = fnc->argslist;
 	return fnc->size;
 }
 
-void _nrn_free_fornetcon(void** v) {
+extern "C" void _nrn_free_fornetcon(void** v) {
 	ForNetConsInfo* fnc = (ForNetConsInfo*)(*v);
 	if (fnc) {
 		if (fnc->argslist) {
@@ -4062,14 +4052,12 @@ void _nrn_free_fornetcon(void** v) {
 		delete fnc;
 		*v = nil;
 	}
-}	
+}
 
-extern "C" {
 void record_init_clear(const TQItem* q, int) {
 	DiscreteEvent* d = (DiscreteEvent*)q->data_;
 	d->frecord_init((TQItem*)q);
 }
-};
 
 void NetCvode::record_init() {
 	int i, cnt = prl_->count();
@@ -4188,9 +4176,9 @@ double nrn_hoc2fun(void* v) {
 	Vect* s = vector_arg(2);
 	Vect* ds = vector_arg(3);
 	if (!d->gcv_){hoc_execerror("not global variable time step", 0);}
-	if (s->capacity() != d->gcv_->neq_) { hoc_execerror("size of state vector != number of state equations", 0); }
+	if (s->size() != d->gcv_->neq_) { hoc_execerror("size of state vector != number of state equations", 0); }
 	if (nrn_nthread > 1) {hoc_execerror("only one thread allowed", 0);}
-	ds->resize(s->capacity());
+	ds->resize(s->size());
 	nrn_cvfun(tt, vector_vec(s), vector_vec(ds));
 	return 0.;
 }
@@ -4199,7 +4187,7 @@ double nrn_hoc2scatter_y(void* v) {
 	NetCvode* d = (NetCvode*)v;
 	Vect* s = vector_arg(1);
 	if (!d->gcv_){hoc_execerror("not global variable time step", 0);}
-	if (s->capacity() != d->gcv_->neq_) { hoc_execerror("size of state vector != number of state equations", 0); }
+	if (s->size() != d->gcv_->neq_) { hoc_execerror("size of state vector != number of state equations", 0); }
 	if (nrn_nthread > 1) {hoc_execerror("only one thread allowed", 0);}
 	d->gcv_->scatter_y(vector_vec(s), 0);
 	return 0.;
@@ -4212,7 +4200,7 @@ double nrn_hoc2gather_y(void* v) {
 	if (nrn_nthread > 1) {hoc_execerror("only one thread allowed", 0);}
 	s->resize(d->gcv_->neq_);
 	d->gcv_->gather_y(vector_vec(s), 0);
-	return s->capacity();
+	return s->size();
 }
 
 void NetCvode::error_weights() {
@@ -4293,7 +4281,7 @@ const char* NetCvode::statename(int is, int style) {
 	if (!hdp_ || hdp_->style() != style) {
 		if (hdp_) {
 			delete hdp_;
-		}			
+		}
 		hdp_ = new HocDataPaths(2*n, style);
 		if (gcv_) {
 			for (it=0; it < nrn_nthread; ++it){
@@ -4835,7 +4823,7 @@ void NetCvode::ps_thread_link(PreSyn* ps) {
 }
 
 void NetCvode::update_ps2nt() {
-	int i;	
+	int i;
 	// first, opportunistically create p[]
 	p_construct(nrn_nthread);
 	// iterate over all threshold PreSyn and fill the NrnThread field
@@ -5073,19 +5061,14 @@ void PreSyn::record(IvocVect* vec, IvocVect* idvec, int rec_id) {
 }
 
 void PreSyn::record(double tt) {
-	int i;
 	if (tvec_) {
 		// need to lock the vector if shared by other PreSyn
 		// since we get here in the thread that manages the
 		// threshold detection (or net_event from NET_RECEIVE).
 		if (idvec_) {tvec_->lock();}
-		i = tvec_->capacity();
-		tvec_->resize_chunk(i+1);
-		tvec_->elem(i) = tt;
+        tvec_->push_back(tt);
 		if (idvec_) {
-			i = idvec_->capacity();
-			idvec_->resize_chunk(i+1);
-			idvec_->elem(i) = rec_id_;
+            idvec_->push_back(rec_id_);
 			tvec_->unlock();
 		}
 	}
@@ -5117,7 +5100,7 @@ void PreSyn::update(Observable* o) { // should be disconnect
 if (dil_.item(i)->obj_) {
 	printf("%s disconnect from ", hoc_object_name(dil_.item(i)->obj_));
 	printf("source %s\n", osrc_ ? hoc_object_name(osrc_) : secname(ssrc_));
-}	
+}
 #endif
 		dil_.item(i)->src_ = nil;
 	}
@@ -5134,7 +5117,7 @@ if (dil_.item(i)->obj_) {
 		idvec_ = nil;
 	}
 	net_cvode_instance->presyn_disconnect(this);
-	thvar_ = nil;	
+	thvar_ = nil;
 	osrc_ = nil;
 	delete this;
 }
@@ -5538,8 +5521,8 @@ static int trajec_buffered(NrnThread& nt, int bsize, IvocVect* v, double* pd,
 {
   int err = 0; //success
   if (bsize > 0) {
-    if (v->buffer_size() < bsize) {
-      v->buffer_size(bsize);
+    if (v->size() < bsize) {
+      v->resize(bsize);
     }
     varrays[i_trajec] = vector_vec(v);
   }else{
@@ -5738,7 +5721,6 @@ int& n_trajec, int*& types, int*& indices, double**& pvars, double**& varrays) {
 
 void nrnthread_trajectory_values(int tid, int n_pr, void** vpr, double tt){ //, int n_trajec,  double* values) {
   if (tid < 0) {
-    net_cvode_instance->record_init();
     return;
   }
   if (tid < nrn_nthread) {
@@ -5780,7 +5762,6 @@ void nrnthread_trajectory_values(int tid, int n_pr, void** vpr, double tt){ //, 
 // pointers and the expression is then evaluated and plotted.
 void nrnthread_trajectory_return(int tid, int n_pr, int vecsz, void** vpr, double tt) {
   if (tid < 0) {
-    net_cvode_instance->record_init();
     return;
   }
   if (tid < nrn_nthread) {
@@ -5792,11 +5773,11 @@ void nrnthread_trajectory_return(int tid, int n_pr, int vecsz, void** vpr, doubl
       if (pr->type() == TvecRecordType) {
         v = ((TvecRecord*)pr)->t_;
         assert(v->buffer_size() >= vecsz);
-        ((ParentVect*)v)->resize(vecsz); // do not zero
+        v->resize(vecsz); // do not zero
       }else if (pr->type() == YvecRecordType) {
         v = ((YvecRecord*)pr)->y_;
         assert(v->buffer_size() >= vecsz);
-        ((ParentVect*)v)->resize(vecsz); // do not zero
+        v->resize(vecsz); // do not zero
 #if HAVE_IV
       }else if (pr->type() == GLineRecordType) {
         GLineRecord* glr = (GLineRecord*)pr;
@@ -6024,9 +6005,7 @@ void TvecRecord::record_init() {
 }
 
 void TvecRecord::continuous(double tt) {
-	int j = t_->capacity();
-	t_->resize_chunk(j + 1);
-	t_->elem(j) = tt;
+    t_->push_back(tt);
 }
 
 YvecRecord::YvecRecord(double* pd, IvocVect* y, Object* ppobj) : PlayRecord(pd, ppobj) {
@@ -6054,9 +6033,7 @@ void YvecRecord::record_init() {
 }
 
 void YvecRecord::continuous(double tt) {
-	int j = y_->capacity();
-	y_->resize_chunk(j + 1);
-	y_->elem(j) = *pd_;
+    y_->push_back(*pd_);
 }
 
 VecRecordDiscrete::VecRecordDiscrete(double* pd, IvocVect* y, IvocVect* t, Object* ppobj) : PlayRecord(pd, ppobj) {
@@ -6081,7 +6058,7 @@ PlayRecordSave* VecRecordDiscrete::savestate_save() {
 }
 
 VecRecordDiscreteSave::VecRecordDiscreteSave(PlayRecord* prl) : PlayRecordSave(prl) {
-	cursize_ = ((VecRecordDiscrete*)pr_)->y_->capacity();
+	cursize_ = ((VecRecordDiscrete*)pr_)->y_->size();
 }
 VecRecordDiscreteSave::~VecRecordDiscreteSave() {
 }
@@ -6089,7 +6066,7 @@ void VecRecordDiscreteSave::savestate_restore() {
 	check();
 	VecRecordDiscrete* vrd = (VecRecordDiscrete*)pr_;
 	vrd->y_->resize(cursize_);
-	assert(cursize_ <= vrd->t_->capacity());
+	assert(cursize_ <= vrd->t_->size());
 }
 void VecRecordDiscreteSave::savestate_write(FILE* f) {
 	fprintf(f, "%d\n", cursize_);
@@ -6111,7 +6088,7 @@ void VecRecordDiscrete::install(Cvode* cv) {
 
 void VecRecordDiscrete::record_init() {
 	y_->resize(0);
-	if (t_->capacity() > 0) {
+	if (t_->size() > 0) {
 		e_->send(t_->elem(0), net_cvode_instance, nrn_threads);
 	}
 }
@@ -6121,12 +6098,10 @@ void VecRecordDiscrete::frecord_init(TQItem* q) {
 }
 
 void VecRecordDiscrete::deliver(double tt, NetCvode* nc) {
-	int j = y_->capacity();
-	y_->resize_chunk(j + 1);
-	y_->elem(j) = *pd_;
-	assert(Math::equal(t_->elem(j), tt, 1e-8));
-	if (j+1 < t_->capacity()) {
-		e_->send(t_->elem(j+1), nc, nrn_threads);
+    y_->push_back(*pd_);
+    assert(Math::equal(t_->elem(y_->size()-1), tt, 1e-8));
+	if (y_->size() < t_->size()) {
+        e_->send(t_->elem(y_->size()), nc, nrn_threads);
 	}
 }
 
@@ -6168,7 +6143,7 @@ void VecRecordDt::install(Cvode* cv) {
 
 void VecRecordDt::record_init() {
 	y_->resize(0);
-	e_->send(0., net_cvode_instance, nrn_threads);
+	e_->send(nrn_threads->_t, net_cvode_instance, nrn_threads);
 }
 
 void VecRecordDt::frecord_init(TQItem* q) {
@@ -6176,12 +6151,10 @@ void VecRecordDt::frecord_init(TQItem* q) {
 }
 
 void VecRecordDt::deliver(double tt, NetCvode* nc) {
-	int j = y_->capacity();
-	y_->resize_chunk(j + 1);
 	if (pd_ == &t) {
-		y_->elem(j) = tt;
+		y_->push_back(tt);
 	}else{
-		y_->elem(j) = *pd_;
+		y_->push_back(*pd_);
 	}
 	e_->send(tt + dt_, nc, nrn_threads);
 }

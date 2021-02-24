@@ -18,12 +18,13 @@
 #include "nrnoc2iv.h"
 #include "objcmd.h"
 
-extern "C" {
 extern int nrn_multisplit_active_;
 extern int hoc_execerror_messages;
 extern int node_index(Section*, double);
-extern int structure_change_cnt, nrn_shape_changed_;
-};
+extern "C" int structure_change_cnt;
+extern int nrn_shape_changed_;
+extern int hoc_return_type_code;
+Object* (*nrnpy_rvp_rxd_to_callable)(Object*) = 0;
 
 class SecPos {
 public:
@@ -127,7 +128,10 @@ public:
 	float right();
 	void list(Object*);
 	void compute();
+	int get_color(void);
+	void set_color(int);
 private:
+	int color_;
 	void set_x();
 	void fill_pointers();
 private:
@@ -185,17 +189,17 @@ static double s_list(void* v) {
 }
 
 static double s_color(void* v) {
-#if HAVE_IV
-IFGUI
-	((RangeVarPlot*)v)->color(colors->color((int)chkarg(1,0,100)));
-ENDGUI
-#endif
-	return 0.;
+	RangeVarPlot* me = (RangeVarPlot*) v;
+	hoc_return_type_code = 1; // integer
+	int old_color = me -> get_color();
+	if (ifarg(1)) {
+		me -> set_color((int)chkarg(1,0,100));
+	}
+	return old_color;
 }
 
-static double to_vector(void* v) {
-	RangeVarPlot* rvp = (RangeVarPlot*)v;
-	Vect* y = vector_arg(1);
+
+static long to_vector_helper(RangeVarPlot* rvp, Vect* y) {
 #if HAVE_IV
 	long i, cnt = rvp->py_data()->count();
 #else
@@ -214,6 +218,27 @@ static double to_vector(void* v) {
 	    }
 #endif
 	}
+	return cnt;
+}
+
+static Object** rvp_vector(void* v) {
+	if (ifarg(1)) {
+		hoc_execerror("Too many arguments", "RangeVarPlot.vector takes no arguments; were you thinking of .to_vector?");
+	}
+	Vect* y = new Vect(0);
+	RangeVarPlot* rvp = (RangeVarPlot*)v;
+	to_vector_helper(rvp, y);
+	return y->temp_objvar();
+}
+
+static double to_vector(void* v) {
+	if (ifarg(3)) {
+		hoc_execerror("Too many arguments", "RangeVarPlot.to_vector takes 1 or 2 arguments.");
+	}
+	long i;
+	RangeVarPlot* rvp = (RangeVarPlot*)v;
+	Vect* y = vector_arg(1);
+	long cnt = to_vector_helper(rvp, y);
 	if (ifarg(2)) {
 		Vect* x = vector_arg(2);
 		x->resize(cnt);
@@ -261,6 +286,11 @@ static Member_func s_members[] = {
 	0, 0
 };
 
+static Member_ret_obj_func rvp_retobj_members[] = {
+	"vector", rvp_vector,
+	0, 0
+};
+
 static void* s_cons(Object*) {
 	char* var = NULL;
 	Object* pyobj = NULL;
@@ -294,7 +324,7 @@ static void s_destruct(void* v) {
 
 void RangeVarPlot_reg() {
 //printf("RangeVarPlot_reg\n");
-	class2oc("RangeVarPlot", s_cons, s_destruct, s_members, NULL, NULL, NULL);
+	class2oc("RangeVarPlot", s_cons, s_destruct, s_members, NULL, rvp_retobj_members, NULL);
 }
 
 #if HAVE_IV
@@ -302,6 +332,7 @@ RangeVarPlot::RangeVarPlot(const char* var, Object* pyobj) : GraphVector(var ? v
 #else
 RangeVarPlot::RangeVarPlot(const char* var, Object* pyobj) : NoIVGraphVector(var) {
 #endif
+	color_ = 1;
 	begin_section_ = 0;
 	end_section_ = 0;
 	sec_list_ = new SecPosList(50);
@@ -339,6 +370,22 @@ RangeVarPlot::~RangeVarPlot() {
 	oc.notify_detach(this);
 #endif
 }
+
+int RangeVarPlot::get_color(void) {
+	return color_;
+}
+
+
+void RangeVarPlot::set_color(int new_color) {
+	color_ = new_color;
+#if HAVE_IV
+IFGUI
+	color(colors->color(color_));
+ENDGUI
+#endif
+}
+
+
 
 #if HAVE_IV
 void RangeVarPlot::update(Observable* o) {
@@ -577,8 +624,8 @@ void SpacePlot::plot() {
 #endif
 
 void RangeVarPlot::set_x() {
-	sec_list_->remove_all();
 	if (!begin_section_ || !end_section_ || !begin_section_->prop || !end_section_->prop) {
+		sec_list_->remove_all();
 		return;
 	}
 	SecPos spos;
@@ -588,6 +635,7 @@ void RangeVarPlot::set_x() {
 	sec1 = begin_section_;
 	sec2 = end_section_;
 	v_setup_vectors();
+	sec_list_->remove_all(); // v_setup_vectors() may recurse once.
 	nd1 = node_exact(sec1, x_begin_);
 	nd2 = node_exact(sec2, x_end_);
 
@@ -670,7 +718,11 @@ RangeExpr::RangeExpr(const char* expr, Object* pycall, SecPosList* spl) {
 	val_ = NULL;
 	exist_ = NULL;
 	if (pycall) {
-		cmd_ = new HocCommand(pycall);
+		if (nrnpy_rvp_rxd_to_callable) {
+			cmd_ = new HocCommand(nrnpy_rvp_rxd_to_callable(pycall));
+		} else {
+			cmd_ = new HocCommand(pycall);
+		}
 		return;
 	}
 	char buf[256];

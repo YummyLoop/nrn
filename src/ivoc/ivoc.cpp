@@ -8,6 +8,9 @@
 #include "oc2iv.h"
 #include "ocfunc.h"
 
+extern Object** (*nrnpy_gui_helper_)(const char* name, Object* obj);
+extern double (*nrnpy_object_to_double_)(Object*);
+
 #if HAVE_IV
 #include "utility.h"
 #include "ivoc.h"
@@ -36,7 +39,6 @@ static nrn::tool::bimap<double*,Observer*>* pdob;
 
 int nrn_err_dialog_active_;
 
-extern "C" {
 
 void* (*nrnpy_save_thread)();
 void (*nrnpy_restore_thread)(void*);
@@ -46,7 +48,7 @@ void nrn_notify_freed(PF pf) {
 		f_list = new FList;
 	}
 	f_list->append(pf);
-//	printf("appended to f_list in ivoc.c\n");
+//	printf("appended to f_list in ivoc.cpp\n");
 }
 
 void nrn_notify_when_void_freed(void* p, Observer* ob) {
@@ -122,10 +124,9 @@ char* cxx_char_alloc(size_t sz) {
   return cp;
 }
 
-} // end extern "C"
 
 #ifndef MINGW // actual implementation in ivocwin.cpp
-extern "C" {void nrniv_bind_thread(void);}
+void nrniv_bind_thread(void);
 void nrniv_bind_thread() {
 	hoc_pushx(1.);
 	hoc_ret();
@@ -166,7 +167,6 @@ ENDGUI
  * window from which oc was run.
  */
 
-extern "C" {
 	extern void hoc_main1_init(const char* pname, const char** env);
 	extern int hoc_oc(const char*);
 	extern int hoc_interviews;
@@ -177,7 +177,7 @@ extern "C" {
 	extern void hoc_pushx(double);
 	extern FILE* hoc_fin;
 	extern void ivoc_cleanup();
-	extern void nrn_shape_update();
+	extern "C" void nrn_shape_update();
 	extern int bbs_poll_;
 	extern void bbs_handle();
 
@@ -187,20 +187,19 @@ extern "C" {
 
 	extern int hoc_print_first_instance;
 	void ivoc_style();
-}
 
 // because NEURON can no longer maintain its own copy of dialogs.cpp
 // we communicate with the InterViews version through a callback.
-extern "C" {
 extern bool (*IVDialog_setAcceptInput)(bool);
 bool setAcceptInputCallback(bool);
 bool setAcceptInputCallback(bool b) {
 	Oc oc;
 	return oc.setAcceptInput(b);
 }
-}
 
-void ivoc_style() { IFGUI
+void ivoc_style() { 
+	TRY_GUI_REDIRECT_DOUBLE("ivoc_style", NULL);
+	IFGUI
 	if (Session::instance()) {
 		Style* s = Session::instance()->style();
 		s->remove_attribute(gargstr(1));
@@ -257,10 +256,8 @@ static HandleStdin* hsd_;
 
 #if defined(WIN32) && !defined(CYGWIN)
 static HandleStdin* hsd_;
-extern "C" {
 void winio_key_press() {
 	hsd_->inputReady(1);
-}
 }
 
 #endif
@@ -449,12 +446,11 @@ void single_event_run() {
 }
 
 #ifdef MINGW
-extern "C" {
 extern void nrniv_bind_call(void);
-}
 #endif
 
-void hoc_notify_iv() { IFGUI
+void hoc_notify_iv() {
+	IFGUI
 #ifdef MINGW
 	if (!nrn_is_gui_thread()) {
 		// allow gui thread to run

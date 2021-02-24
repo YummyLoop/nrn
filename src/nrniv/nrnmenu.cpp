@@ -13,17 +13,20 @@
 #include "nrnoc2iv.h"
 #include "nrnmenu.h"
 #include "classreg.h"
+#include "gui-redirect.h"
+extern Object** (*nrnpy_gui_helper_)(const char* name, Object* obj);
+extern double (*nrnpy_object_to_double_)(Object*);
+
 
 typedef void (*ReceiveFunc)(Point_process*, double*, double);
-extern "C" int hoc_return_type_code;
-extern "C" {
+extern int hoc_return_type_code;
 // from nrnoc
 #include "membfunc.h"
-#include "parse.h"
+#include "parse.hpp"
 extern Symlist *hoc_built_in_symlist;
 extern Symbol **pointsym;
 extern double* point_process_pointer(Point_process*, Symbol*, int);
-extern Point_process* ob2pntproc(Object*);
+extern "C" Point_process* ob2pntproc(Object*);
 extern ReceiveFunc* pnt_receive;
 extern int nrn_has_net_event_cnt_;
 extern int* nrn_has_net_event_;
@@ -43,7 +46,6 @@ void nrnpointmenu();
 Object* (*nrnpy_callable_with_args)(Object*, int narg);
 int (*nrnpy_ob_is_seg)(Object*);
 
-}
 
 #if HAVE_IV
 static void pnodemenu(Prop* p1, double, int type, const char* path, MechSelector* = NULL);
@@ -52,6 +54,8 @@ static void point_menu(Object*, int);
 #endif
 
 void nrnallsectionmenu() {
+	TRY_GUI_REDIRECT_DOUBLE("nrnallsectionmenu", NULL);
+
 #if HAVE_IV
 IFGUI
 	SectionBrowser::make_section_browser();
@@ -62,6 +66,7 @@ ENDGUI
 }
 
 void nrnsecmenu() {
+	TRY_GUI_REDIRECT_DOUBLE("nrnsecmenu", NULL);
 #if HAVE_IV
 IFGUI
 	double x;
@@ -80,7 +85,7 @@ ENDGUI
 }
 
 #ifdef ultrix
-extern "C" { char *strstr(const char *, const char *); }
+char *strstr(const char *, const char *);
 #endif
 
 static bool has_globals(const char* name) {
@@ -97,6 +102,7 @@ static bool has_globals(const char* name) {
 }
 
 void nrnglobalmechmenu() {
+	TRY_GUI_REDIRECT_DOUBLE("nrnglobalmechmenu", NULL); 
 #if HAVE_IV
 IFGUI
 	Symbol *sp;
@@ -330,6 +336,7 @@ hoc_ivpvalue(vsym->name, hoc_val_pointer(buf), deflt, vsym->extra);
 #endif
 
 void nrnallpointmenu() {
+	TRY_GUI_REDIRECT_DOUBLE("nrnallpointmenu", NULL); 
 #if HAVE_IV
 IFGUI
 	int i;
@@ -397,6 +404,7 @@ ENDGUI
 
 void nrnpointmenu()
 {
+	TRY_GUI_REDIRECT_DOUBLE("nrnpointmenu", NULL); 
 #if HAVE_IV
 IFGUI
 	Object* ob;
@@ -495,7 +503,10 @@ static void point_menu(Object* ob, int make_label) {
 
 //-----------------------
 // MechanismStandard
+static Symbol* ms_class_sym_;
+
 static double ms_panel(void* v) {
+	TRY_GUI_REDIRECT_METHOD_ACTUAL_DOUBLE("MechanismStandard.panel", ms_class_sym_, v);
 #if HAVE_IV
 IFGUI
 	char* label = NULL;
@@ -652,6 +663,7 @@ static Member_func ms_members[] = {
 
 void MechanismStandard_reg() {
 	class2oc("MechanismStandard", ms_cons, ms_destruct, ms_members, NULL, NULL, NULL);
+	ms_class_sym_ = hoc_lookup("MechanismStandard");
 }
 
 MechanismStandard::MechanismStandard(const char* name, int vartype) {
@@ -940,6 +952,7 @@ help action
 mt.action("command")
 The action to be executed when a submenu item is selected.
 */
+static Symbol* mt_class_sym_;
 
 static double mt_select(void* v) {
 	MechanismType* mt = (MechanismType*)v;
@@ -983,6 +996,7 @@ static double mt_count(void* v) {
 	return double(mt->count());
 }
 static double mt_menu(void* v) {
+	TRY_GUI_REDIRECT_METHOD_ACTUAL_DOUBLE("MechanismType.menu", mt_class_sym_, v);
 #if HAVE_IV
 IFGUI
 	MechanismType* mt = (MechanismType*)v;
@@ -1096,6 +1110,7 @@ static Member_ret_str_func mt_retstr_func[] = {
 void MechanismType_reg() {
 	class2oc("MechanismType", mt_cons, mt_destruct, mt_members,
 		NULL, mt_retobj_members, mt_retstr_func);
+	mt_class_sym_ = hoc_lookup("MechanismType");
 }
 
 /* static */ class MechTypeImpl {
@@ -1229,10 +1244,8 @@ const char* MechanismType::selected(){
 int MechanismType::internal_type() {
 	return mti_->type_[selected_item()];
 }
-extern "C" {
 extern void mech_insert1(Section*, int);
 extern void mech_uninsert1(Section*, Symbol*);
-}
 void MechanismType::insert(Section* sec){
 	if (!mti_->is_point_) {
 		mech_insert1(sec, memb_func[mti_->type_[selected_item()]].sym->subtype);
@@ -1244,7 +1257,7 @@ void MechanismType::remove(Section* sec){
 	}
 }
 
-extern "C" {extern Object* nrn_new_pointprocess(Symbol*);}
+extern Object* nrn_new_pointprocess(Symbol*);
 
 void MechanismType::point_process(Object** o){
 	Symbol* sym = memb_func[mti_->type_[selected_item()]].sym;

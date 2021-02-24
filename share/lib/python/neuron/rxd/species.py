@@ -16,6 +16,9 @@ import re
 #Now set in rxd.py
 #set_nonvint_block = neuron.nrn_dll_sym('set_nonvint_block')
 
+# Update the structure_change_cnt & diam_change_cnt if the shape has changed
+_nrn_shape_update = nrn_dll_sym('nrn_shape_update')
+
 fptr_prototype = ctypes.CFUNCTYPE(None)
 
 set_setup = nrn_dll_sym('set_setup')
@@ -38,9 +41,6 @@ ICS_insert_inhom.argtypes = ICS_insert.argtypes = [
     ctypes.c_int, 
     ctypes.py_object, 
     ctypes.c_long,
-    numpy.ctypeslib.ndpointer(dtype=int),
-    numpy.ctypeslib.ndpointer(dtype=int),
-    numpy.ctypeslib.ndpointer(dtype=int),
     numpy.ctypeslib.ndpointer(dtype=int),
     numpy.ctypeslib.ndpointer(dtype=int),
     ctypes.c_long,
@@ -76,7 +76,7 @@ _set_grid_currents = nrn_dll_sym('set_grid_currents')
 _set_grid_currents.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.py_object, ctypes.py_object, ctypes.py_object]
 
 _ics_set_grid_currents = nrn_dll_sym('ics_set_grid_currents')
-_ics_set_grid_currents.argtypes = [ctypes.c_int, ctypes.c_int, numpy.ctypeslib.ndpointer(dtype=numpy.int64), numpy.ctypeslib.ndpointer(dtype=numpy.int64), ctypes.py_object, numpy.ctypeslib.ndpointer(dtype=numpy.float_)]
+_ics_set_grid_currents.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.py_object, numpy.ctypeslib.ndpointer(dtype=numpy.float_)]
 
 
 _delete_by_id = nrn_dll_sym('delete_by_id')
@@ -108,36 +108,6 @@ def _1d_submatrix_n():
         return len(node._states)
     else:
         return numpy.min([sp()._indices3d() for sp in list(_get_all_species()) if sp() is not None])"""
-            
-_extracellular_has_setup = False
-_extracellular_exists = False
-
-def _extracellular_do_setup():
-    global _extracellular_has_setup
-    _extracellular_has_setup = True
-
-
-def _extracellular_do_initialize():
-    if _extracellular_has_setup:
-        """handle initialization at finitialize time"""
-        for obj in _extracellular_diffusion_objects:
-            obj._finitialize()
-        # TODO: allow
-
-
-_extracellular_set_setup = nrn_dll_sym('set_setup')
-_extracellular_set_setup.argtypes = [fptr_prototype]
-_extracellular_set_initialize = nrn_dll_sym('set_initialize')
-_extracellular_set_initialize.argtypes = [fptr_prototype]
-
-def _ensure_extracellular():
-    global _extracellular_exists, do_setup_fptr, do_initialize_fptr
-    if not _extracellular_exists:
-        do_setup_fptr = fptr_prototype(_extracellular_do_setup)
-        do_initialize_fptr = fptr_prototype(_extracellular_do_initialize)
-        _extracellular_set_setup(do_setup_fptr)
-        _extracellular_set_initialize(do_initialize_fptr)
-    _extracellular_exists = True
 
 _ontology_id = re.compile('^\[[a-zA-Z][a-zA-Z0-9_]*:[a-zA-Z0-9_]*\]|[a-zA-Z][a-zA-Z0-9_]*:[a-zA-Z0-9_]*$')
 
@@ -217,6 +187,7 @@ class _SpeciesMathable(object):
                 return 'species[%d][%d]' % (self._id, reg._id)
             else:
                 raise RxDException("Species %r is not defined on region %r." % (self, reg))
+        raise RxDException("_semi_compile received inconsistent state")
     
     def _involved_species(self, the_dict):
         the_dict[self._semi_compile] = weakref.ref(self)
@@ -455,7 +426,7 @@ class SpeciesOnRegion(_SpeciesMathable):
         belonging to the Region cyt.
         """
         from . import rxd
-        h.doNotify()
+        _nrn_shape_update()
         if initializer.is_initialized():
             rxd._update_node_data()
         else:
@@ -583,13 +554,11 @@ class _IntracellularSpecies(_SpeciesMathable):
 
         if hasattr(self,'_dgrid'):
             self._grid_id = ICS_insert_inhom(0, self._states._ref_x[0], len(self.states), self.neighbors,
-                                             self._ordered_x_nodes, self._ordered_y_nodes, self._ordered_z_nodes,
                                              self._x_line_defs, len(self._x_line_defs), self._y_line_defs, 
                                              len(self._y_line_defs), self._z_line_defs, len(self._z_line_defs),
                                              self._dgrid, self._dx, is_diffusable, self._atolscale, self._alphas)
         else:
             self._grid_id = ICS_insert(0, self._states._ref_x[0], len(self.states), self.neighbors,
-                                       self._ordered_x_nodes, self._ordered_y_nodes, self._ordered_z_nodes,
                                        self._x_line_defs, len(self._x_line_defs), self._y_line_defs, 
                                        len(self._y_line_defs), self._z_line_defs, len(self._z_line_defs),
                                        self._d, self._dx, is_diffusable, self._atolscale, self._alphas)
@@ -611,9 +580,9 @@ class _IntracellularSpecies(_SpeciesMathable):
                 del _intracellular_diffusion_objects[self]
                 # remove the grid id
                 for sp in _intracellular_diffusion_objects:
-                    if hasattr(sp,'_grid_id') and sp._grid_id > self._grid_id:
+                    if sp._grid_id > self._grid_id:
                         sp._grid_id -= 1
-                if hasattr(self,'_grid_id'): _delete_by_id(self._grid_id)
+                _delete_by_id(self._grid_id)
                 # remove any node.include_flux for the extracellular species.
                 from . import node
                 newflux = {'index': [], 'type': [], 'source': [], 'scale': [], 'region': []}
@@ -634,6 +603,16 @@ class _IntracellularSpecies(_SpeciesMathable):
                         newflux['region'].append(region)
                 node._has_node_fluxes = newflux != node._node_fluxes 
                 node._node_fluxes = newflux
+
+                # if this is the only intracellular species using
+                # node._point_indices, then remove the corresponding region.
+                for sp in _intracellular_diffusion_objects:
+                    if sp._region == self._region:
+                        break
+                else:
+                    if self._region in node._point_indices:
+                        del node._point_indices[self._region]
+
                 nrn_dll_sym('structure_change_cnt', ctypes.c_int).value += 1
  
     #Line Definitions for each direction
@@ -753,7 +732,7 @@ class _IntracellularSpecies(_SpeciesMathable):
                     scale = sum(node_area)/geom_area
                     scale_factors = [sign * area * scale * scale_factor for area in node_area]
                     self._scale_factors = numpy.asarray(scale_factors, dtype=numpy.float_)
-                    _ics_set_grid_currents(grid_list_start, self._grid_id, self._surface_nodes_per_seg, self._surface_nodes_per_seg_start_indices, self._current_neuron_pointers, self._scale_factors)
+                    _ics_set_grid_currents(grid_list_start, self._grid_id, self._current_neuron_pointers, self._scale_factors)
 
 
     def _semi_compile(self, region, instruction):
@@ -770,6 +749,7 @@ class _IntracellularSpecies(_SpeciesMathable):
                 return 'params_3d[%d]' %  (self._grid_id)
             else:
                 return 'species_3d[%d]' % (self._grid_id)
+        raise RxDException("_semi_compile received inconsistent state")
 
     def _register_cptrs(self):
         self._isalive()
@@ -829,7 +809,7 @@ class _IntracellularSpecies(_SpeciesMathable):
                 return(len(sig.parameters))
             else:
                 sig = inspect.getargspec(fun)
-                if sig.args != None or sig.keywords != None:
+                if sig.varargs != None or sig.keywords != None:
                     raise RxDException("Intracellular diffusion coefficient function may not include *args or *kwargs")
                 return len(sig.args)
         dc = None
@@ -1014,9 +994,9 @@ class _ExtracellularSpecies(_SpeciesMathable):
                 del _extracellular_diffusion_objects[self]
                 # remove the grid id
                 for sp in _extracellular_diffusion_objects:
-                    if hasattr(sp,'_grid_id') and sp._grid_id > self._grid_id:
+                    if sp._grid_id > self._grid_id:
                         sp._grid_id -= 1
-                if hasattr(self,'_grid_id'): _delete_by_id(self._grid_id)
+                _delete_by_id(self._grid_id)
                 # remove any node.include_flux for the extracellular species.
                 from . import node
                 newflux = {'index': [], 'type': [], 'source': [], 'scale': [], 'region': []}
@@ -1246,9 +1226,11 @@ class Species(_SpeciesMathable):
             if hasattr(d,'__len__') and all([di == d[0] for di in d]) and not callable(d[0]):
                 self._d = d[0]
             else:
-                from .rxd import _dimensions
+                from .rxd import _domain_lookup
                 reglist = regions if hasattr(regions,'__len__') else [regions]
-                dims = [_dimensions[sec] for reg in reglist for sec in reg.secs]
+                dims = [_domain_lookup(sec) for reg in reglist 
+                            if not isinstance(reg, region.Extracellular)
+                            for sec in reg.secs]
                 if not all([dim == dims[0] for dim in dims]):
                     raise RxDException('Hybrid 1D/3D diffusion does not currently support anisotropy or inhomogeneous grids. For separate 1D and 3D diffusion please create separate regions and species for 3D and 1D sections') 
                 else:
@@ -1264,20 +1246,19 @@ class Species(_SpeciesMathable):
             raise RxDException("The represents=%s is not valid CURIE" % represents)
         else:
             self.represents = represents
-        initializer._init_lock.acquire()
-        _all_species.append(weakref.ref(self))
+        with initializer._init_lock:
+            _all_species.append(weakref.ref(self))
         
 
-        # declare an update to the structure of the model (the number of differential equations has changed)
-        nrn_dll_sym('structure_change_cnt', ctypes.c_int).value += 1
+            # declare an update to the structure of the model (the number of differential equations has changed)
+            nrn_dll_sym('structure_change_cnt', ctypes.c_int).value += 1
 
-        self._ion_register() 
+            self._ion_register() 
 
-        # initialize self if the rest of rxd is already initialized
-        if initializer.is_initialized():
-            self._do_init()
-            rxd._update_node_data(True, True)
-        initializer._init_lock.release()
+            # initialize self if the rest of rxd is already initialized
+            if initializer.is_initialized():
+                self._do_init()
+                rxd._update_node_data(True, True)
 
     
     def _do_init(self):
@@ -1351,9 +1332,6 @@ class Species(_SpeciesMathable):
         self._extracellular_regions = [r for r in regions if isinstance(r, region.Extracellular)]
         if not all(isinstance(r, region.Region) for r in self._regions):
             raise RxDException('regions list must consist of Region and Extracellular objects only')
-        if self._extracellular_regions:
-            # make sure that the extracellular callbacks are configured, if necessary
-            _ensure_extracellular()
               
         # at this point self._name is None if unnamed or a string == name if
         # named
@@ -1427,17 +1405,12 @@ class Species(_SpeciesMathable):
         self._register_cptrs()
 
     def __del__(self):
+        global _all_species, _defined_species, _all_defined_species
         if hasattr(self,'deleted'):
             return
         self.deleted = True
         remove_species_atolscale(self._id)
         
-        global _all_species, _defined_species, _all_defined_species
-        try:
-            from . import section1d, node
-        except:
-            # may not be able to import on exit
-            return 
         name = self.name if self.name else self._id
         if name in _defined_species:
             for r in self.regions:
@@ -1649,10 +1622,13 @@ class Species(_SpeciesMathable):
         else:
             return []
 
-    def _indices1d(self, r=None):
+    def _indices1d(self, r=None, secs=None):
         """return the indices of just the 1D nodes corresponding to this species in the given region"""
+        if secs is not None:
+            if r is not None:
+                return [idx for sec in self._secs for idx in sec.indices if sec in secs and sec._region == r]
+            return [idx for sec in self._secs for idx in sec.indices if sec in secs] 
         return self._region_indices.get(r, [])
-    
     def indices(self, r=None, secs=None):
         """return the indices corresponding to this species in the given region
         
@@ -1721,7 +1697,7 @@ class Species(_SpeciesMathable):
                 charge = self.charge
                 namei = self._name + 'i'
                 nameo = self._name + 'o'
-                tenthousand_over_charge_faraday = 10000. / (charge * rxd.FARADAY)
+                tenthousand_over_charge_faraday = 10000. / (charge * h.FARADAY)
                 for i, nodeobj in enumerate(self._nodes):
                     if surface_area[i]:
                         r = nodeobj.region
@@ -1847,7 +1823,7 @@ class Species(_SpeciesMathable):
         This can then be further restricted using the callable property of NodeList objects."""
 
         from . import rxd
-        h.doNotify()
+        _nrn_shape_update()
         if initializer.is_initialized():
             rxd._update_node_data()
         else:
@@ -1952,6 +1928,7 @@ class Parameter(Species):
                 return 'params[%d][%d]' % (self._id, self._regions[0]._id)
             else:
                 raise RxDException("Parameter %r is not defined on region %r" % (self, reg))
+        raise RxDException("_semi_compile received inconsistent state")
 
 
     def __repr__(self):

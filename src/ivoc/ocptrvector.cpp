@@ -18,9 +18,15 @@
 #if HAVE_IV
 #include "graph.h"
 #endif
+#include "gui-redirect.h"
+extern Object** (*nrnpy_gui_helper_)(const char* name, Object* obj);
+extern double (*nrnpy_object_to_double_)(Object*);
 
-extern "C" int hoc_return_type_code;
+extern int hoc_return_type_code;
+
 static double dummy;
+
+static Symbol* pv_class_sym_;
 
 OcPtrVector::OcPtrVector(int sz) {
 	label_ = NULL;
@@ -176,12 +182,13 @@ static int narg() {
 }
 
 static double ptr_plot(void* v) {
+	TRY_GUI_REDIRECT_METHOD_ACTUAL_DOUBLE("PtrVector.plot", pv_class_sym_, v);
 	OcPtrVector* opv = (OcPtrVector*)v;
 #if HAVE_IV
 IFGUI
         int i;
 	double** y = opv->pd_;
-	int n = opv->size_;
+	auto n = opv->size_;
 	char* label = opv->label_;
 
         Object* ob1 = *hoc_objgetarg(1);
@@ -206,7 +213,7 @@ IFGUI
 	   if (hoc_is_object_arg(2)) {
                  // passed a vector
              Vect* vp2 = vector_arg(2);
-	     n = Math::min(n, vp2->capacity());
+	     n = std::min(n, vp2->size());
 	     for (i=0; i < n; ++i) gv->add(vp2->elem(i), y[i]);
            } else {
                  // passed xinterval
@@ -263,4 +270,5 @@ static void destruct(void* v) {
 
 void OcPtrVector_reg() {
 	class2oc("PtrVector", cons, destruct, members, 0, 0, retstr_members);
+	pv_class_sym_ = hoc_lookup("PtrVector");
 }

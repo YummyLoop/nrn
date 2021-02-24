@@ -9,7 +9,7 @@
 #include <unistd.h>
 #endif
 
-extern "C" int hoc_return_type_code;
+extern int hoc_return_type_code;
 
 #ifdef WIN32
 #include <errno.h>
@@ -38,18 +38,22 @@ extern "C" int hoc_return_type_code;
 #include <direct.h>
 #endif
 
+#include "gui-redirect.h"
+extern Object** (*nrnpy_gui_helper_)(const char* name, Object* obj);
+extern double (*nrnpy_object_to_double_)(Object*);
+
+
+static Symbol* file_class_sym_;
 extern char* ivoc_get_temp_file();
 static int ivoc_unlink(const char*);
 int ivoc_unlink(const char* s) {
 	return unlink(s);
 }
 
-extern "C" {
 #include "hocstr.h"
-	FILE* hoc_obj_file_arg(int i);
-}
+extern "C" FILE* hoc_obj_file_arg(int i);
 
-FILE* hoc_obj_file_arg(int i) {
+extern "C" FILE* hoc_obj_file_arg(int i) {
 	Object* ob = *hoc_objgetarg(i);
 	check_obj_type(ob, "File");
 	OcFile* f = (OcFile*)(ob->u.this_pointer);
@@ -191,6 +195,7 @@ static const char** f_dir(void* v) {
 }
 
 static double f_chooser(void* v){
+	TRY_GUI_REDIRECT_METHOD_ACTUAL_DOUBLE("File.chooser", file_class_sym_, v);
 #if HAVE_IV
 IFGUI
 	OcFile* f = (OcFile*)v;
@@ -314,6 +319,7 @@ static Member_ret_str_func f_retstr_members[] = {
 
 void OcFile_reg() {
 	class2oc("File", f_cons, f_destruct, f_members, NULL, NULL, f_retstr_members);
+	file_class_sym_ = hoc_lookup("File");
 }
 
 void OcFile::close() {
