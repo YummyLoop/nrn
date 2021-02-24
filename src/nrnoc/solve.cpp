@@ -30,7 +30,7 @@
    (no parent resistance, only a half segment resistance). It was an error
    to try to connect a section to position 0.  Now we are going to allow
    that by the following artifice.
-
+   
    Section 0 is always special. Its nodes act as roots to the independent
    trees.  They do not connect to each other. It has no properties.
 */
@@ -144,7 +144,7 @@ assert(0)
 	}
 
 	return err;
-}
+}	
 #endif /*DEBUGSOLVE*/
 
 
@@ -152,7 +152,7 @@ double node_dist(Section* sec, Node* node)
 {
 	int inode;
 	double ratio;
-
+	
 	if (!sec || sec->parentnode == node) {
 		return 0.;
 	}else if ((inode = node->sec_node_index_) == sec->nnode-1) {
@@ -222,8 +222,8 @@ static Section *origin_sec;
 void distance(void) {
 	double d, d_origin;
 	int mode;
-	Node* node, *node_exact();
-	Section *sec;
+	Node* node;
+	Section *sec;	
 	static Node* origin_node;
 	Node* my_origin_node;
 	Section* my_origin_sec;
@@ -231,7 +231,7 @@ void distance(void) {
 	if (tree_changed) {
 		setup_topology();
 	}
-
+			
 	if (ifarg(2)) {
 		nrn_seg_or_x_arg2(2, &sec, &d);
 		if (hoc_is_double_arg(1)) {
@@ -273,7 +273,7 @@ void distance(void) {
 	}
 	hoc_retpushx(d);
 }
-
+	
 static void dashes(Section* sec, int offset, int first);
 
 void nrnhoc_topology(void) /* print the topology of the branched cable */
@@ -298,7 +298,6 @@ static void dashes(Section* sec, int offset, int first)
 	int i, scnt;
 	Section* ch;
 	char direc[30];
-	extern double nrn_section_orientation();
 
 	i = (int)nrn_section_orientation(sec);
 	sprintf(direc, "(%d-%d)", i, 1-i);
@@ -317,8 +316,7 @@ static void dashes(Section* sec, int offset, int first)
 	for (scnt=0, ch=sec->child; ch; ++scnt, ch = ch->sibling) {
 		hoc_pushobj((Object**)ch);
 	}
-	while(scnt--) {
-		Object** hoc_objpop();
+	while(scnt--) {		
 		ch = (Section*)hoc_objpop();
 		i = node_index_exact(sec, nrn_connection_position(ch));
 		Printf(" ");
@@ -433,7 +431,7 @@ void bksub(NrnThread* _nt)
 	for (i = i2; i < i3; ++i) {
 		VEC_RHS(i) -= VEC_B(i) * VEC_RHS(_nt->_v_parent_index[i]);
 		VEC_RHS(i) /= VEC_D(i);
-	}
+	}	
     }else
 #endif /* CACHEVEC */
     {
@@ -445,7 +443,7 @@ void bksub(NrnThread* _nt)
 		nd = _nt->_v_parent[i];
 		NODERHS(cnd) -= NODEB(cnd) * NODERHS(nd);
 		NODERHS(cnd) /= NODED(cnd);
-	}
+	}	
     }
 }
 
@@ -510,7 +508,7 @@ static void section_unlink(Section* sec);
 void sec_free(hoc_Item* secitem)
 {
 	Section *sec;
-
+	
 	if (!secitem) {
 		return;
 	}
@@ -596,7 +594,7 @@ Node** node_construct(int n)
 {
 	Node* nd, **pnode;
 	int i;
-
+	
 	pnode = (Node**)ecalloc((unsigned)n, sizeof(Node*));
 	for (i = n - 1; i >= 0; i--) {
 		nd = (Node *)ecalloc(1, sizeof(Node));
@@ -775,7 +773,7 @@ static void node_realloc(Section* sec, short nseg)
 			i1 = (int)(n1*x);
 			pn2[i2] = pn1[i1];
 			pn1[i1] = (Node*)0;
-		}
+		}	
 		/* do not lose any point processes */
 		i1 = 0;
 		for (i2=0; i2 < n2; ++i2) {
@@ -848,7 +846,7 @@ void section_order(void) /* create a section order consistent */
 		sec->order = -1;
 		++section_count;
 	}
-
+	
 	if (secorder) {
 		free((char *)secorder);
 		secorder = (Section**)0;
