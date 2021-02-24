@@ -264,7 +264,7 @@ void mac_open_doc(const char* s) {
 				hoc_default_dll_loaded_ = 1.;
 			}
 		}
-	}
+	}		
 	hoc_xopen1(s, 0);
 }
 void mac_open_app(){
@@ -363,7 +363,7 @@ static int nrn_optargint(const char* opt, int* pargc, const char** argv, int dfl
 }
 
 #if USENRNJAVA
-void nrn_InitializeJavaVM();
+void nrn_InitializeJavaVM();	
 #endif
 
 #if 1 //for debugging
@@ -529,7 +529,7 @@ int ivocmain_session(int argc, const char** argv, const char** env, int start_se
 	  printf("Warning: detected user attempt to enable MPI, but MPI support was disabled at build time.\n");
 	}
 
-#endif
+#endif 		
 
 #if defined(IVX11_DYNAM)
 	if (hoc_usegui && ivx11_dyload()) {
@@ -735,7 +735,7 @@ IFGUI
 	if (pw < 1100) {
 		scale = 1200./double(pw);
 	}
-	session->style()->find_attribute("mswin_scale", scale);
+	session->style()->find_attribute("mswin_scale", scale); 
 	iv_display_scale(float(scale));
 ENDGUI
 #endif
@@ -776,7 +776,7 @@ ENDGUI
 		long i;
 		if (session->style()->find_attribute("isatty", i)) {
 			nrn_istty_ = i;
-		}
+		}		
 	}else
 #endif
 	{
@@ -805,7 +805,7 @@ ENDGUI
 #endif //HAVE_IV
 
 #if USENRNJAVA
-	nrn_InitializeJavaVM();
+	nrn_InitializeJavaVM();	
 #endif
 #if OCSMALL
 	if (argc == 1) {
@@ -896,7 +896,7 @@ void hoc_single_event_run() {
 #if HAVE_IV
 IFGUI
 	void single_event_run();
-
+	
 	single_event_run();
 ENDGUI
 #endif
