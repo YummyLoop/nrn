@@ -326,7 +326,7 @@ static void dashes(Section* sec, int offset, int first)
 
 /* solve the matrix equation */
 void nrn_solve(NrnThread* _nt) {
-#if 1
+#if 0
 	printf("\nnrn_solve enter %lx\n", (long)_nt);
 	nrn_print_matrix(_nt);
 #endif
@@ -374,7 +374,7 @@ void nrn_solve(NrnThread* _nt) {
 		bksub(_nt);
 	}
 #endif
-#if 1
+#if 0
 	printf("\nnrn_solve leave %lx\n", (long)_nt);
 	nrn_print_matrix(_nt);
 #endif
