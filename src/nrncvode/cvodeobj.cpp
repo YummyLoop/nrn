@@ -232,7 +232,7 @@ static double threshold(void* v) {
 	hoc_return_type_code = 1; // integer
 	//printf("Hello world!");
 	if (ifarg(1)) {
-		d->threshold((float)chkarg(1, 0, MAXFLOAT));
+		d->threshold((float)chkarg(1, 0, 1e30));
 	}
 	return d->threshold();
 }
